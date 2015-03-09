@@ -97,9 +97,6 @@ public class EarleyRunner {
         }
         Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
 
-        System.out.println("Grammar rules:");
-        System.out.println(grammarRules);
-
 		Scanner input = new Scanner(System.in);
 		while(true) {
 			System.out.println("Enter a line of text to recognize:");
