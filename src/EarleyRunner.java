@@ -98,6 +98,7 @@ public class EarleyRunner {
         Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
 
 		Scanner input = new Scanner(System.in);
+        InputLoop:
 		while(true) {
 			System.out.println("Enter a line of text to recognize:");
 			
@@ -109,7 +110,12 @@ public class EarleyRunner {
             // First tokenize the input line
             ArrayList<Token> tokens = new ArrayList<>();
             Matcher inputMatcher = lexerPattern.matcher(inputLine);
+            int lastIndexMatched = 0;
             while(inputMatcher.find()) {
+                if(inputMatcher.start() != lastIndexMatched) {
+                    System.out.println("That line failed to be tokenized");
+                    continue InputLoop;
+                }
                 for(String name : symbols.keySet()) {
                     if(inputMatcher.group(name) != null) {
                         Token matchedToken = new Token(inputMatcher.group(name), symbols.get(name));
@@ -117,6 +123,11 @@ public class EarleyRunner {
                         break;
                     }
                 }
+                lastIndexMatched = inputMatcher.end();
+            }
+            if(lastIndexMatched != inputLine.length()) {
+                System.out.println("That line failed to be tokenized");
+                continue;
             }
 
 			ParseTreeNode recognizingResult = recognizes(grammarRules, startRule, tokens);
