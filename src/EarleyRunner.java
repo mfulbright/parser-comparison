@@ -1,25 +1,128 @@
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Scanner;
-import java.util.Stack;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class EarleyRunner {
 
-	public static void main(String[] args) {
-		
+    public static final String GRAMMAR_FILE_NAME = "grammarmod_grammar.txt";
+
+	public static void main(String[] args) throws IOException {
+
+        Scanner grammarFile = new Scanner(new File(GRAMMAR_FILE_NAME));
+
+        // first the lexing section
+        String line = grammarFile.nextLine();
+        assert(line.equals("LEX"));
+
+        // Map the names of symbols to the symbol instances
+        HashMap<String, Symbol> symbols = new HashMap<>();
+        // Map the names of terminals to the terminal instances
+        HashMap<String, Terminal> terminals = new HashMap<>();
+        line = grammarFile.nextLine();
+        while(! line.equals("")) {
+            // The format of each line should be "name = pattern"
+            String name = line.substring(0, line.indexOf(" "));
+            String pattern = line.substring(line.indexOf(" ") + 3);
+            assert(! symbols.containsKey(name));
+            Symbol newSymbol = new Symbol(name, pattern);
+            symbols.put(name, newSymbol);
+            terminals.put(name, new Terminal(newSymbol));
+            line = grammarFile.nextLine();
+        }
+
+        line = grammarFile.nextLine();
+        assert(line.equals("GRAMMAR"));
+
+        // Map the names of nonterminals to the nonterminal instances
+        HashMap<String, Nonterminal> nonterminals = new HashMap<>();
+        HashMap<Nonterminal, ArrayList<GrammarRule>> grammarRules = new HashMap<>();
+        GrammarRule startRule = null; // The first rule in the grammar must be the start rule
+        while(grammarFile.hasNextLine()) {
+            line = grammarFile.nextLine();
+            // The format of each line should be "Nonterminal = GrammarElement GrammarElement GrammarElement"
+            String[] pieces = line.split(" ");
+            String nonterminalName = pieces[0];
+            Nonterminal lhsNonterminal;
+            if(nonterminals.containsKey(nonterminalName)) {
+                lhsNonterminal = nonterminals.get(nonterminalName);
+            } else {
+                lhsNonterminal = new Nonterminal(nonterminalName);
+                nonterminals.put(nonterminalName, lhsNonterminal);
+            }
+            ArrayList<GrammarElement> ruleRightHandSide = new ArrayList<>();
+            // pieces[1] will be the '='
+            for(int rhsIndex = 2; rhsIndex < pieces.length; rhsIndex++) {
+                String grammarElementName = pieces[rhsIndex];
+                if(terminals.containsKey(grammarElementName)) {
+                    ruleRightHandSide.add(terminals.get(grammarElementName));
+                } else {
+                    Nonterminal rhsNonterminal;
+                    if(nonterminals.containsKey(grammarElementName)) {
+                        rhsNonterminal = nonterminals.get(grammarElementName);
+                    } else {
+                        rhsNonterminal = new Nonterminal(grammarElementName);
+                        nonterminals.put(grammarElementName, rhsNonterminal);
+                    }
+                    ruleRightHandSide.add(rhsNonterminal);
+                }
+            }
+            GrammarRule newRule = new GrammarRule(lhsNonterminal, ruleRightHandSide);
+            // If this is the first rule, it must be the start rule
+            if(startRule == null) {
+                startRule = newRule;
+            }
+            // Add the new rule into the grammarRules map
+            if(grammarRules.containsKey(lhsNonterminal)) {
+                ArrayList<GrammarRule> nonterminalRules = grammarRules.get(lhsNonterminal);
+                nonterminalRules.add(newRule);
+            } else {
+                ArrayList<GrammarRule> nonterminalRules = new ArrayList<>();
+                nonterminalRules.add(newRule);
+                grammarRules.put(lhsNonterminal, nonterminalRules);
+            }
+        }
+        assert(startRule != null);
+        // The start rule must be the only rule with that nonterminal
+        ArrayList<GrammarRule> startSymbolRules = grammarRules.get(startRule.getLeftHandSide());
+        assert(startSymbolRules.size() == 1);
+
+        // Compile the lexer patterns into a regex matcher
+        StringBuffer combinedRegexBuffer = new StringBuffer();
+        for(String name : symbols.keySet()) {
+            Symbol symbol = symbols.get(name);
+            combinedRegexBuffer.append(String.format("|(?<%s>%s)", name, symbol.getPattern()));
+        }
+        Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
+
+        System.out.println("Grammar rules:");
+        System.out.println(grammarRules);
+
 		Scanner input = new Scanner(System.in);
 		while(true) {
 			System.out.println("Enter a line of text to recognize:");
 			
-			String line = input.nextLine();
-			if(line.equals("END")) {
+			String inputLine = input.nextLine();
+			if(inputLine.equals("END")) {
 				break;
 			}
-			
-			ParseTreeNode recognizingResult = recognizes(line);
+
+            // First tokenize the input line
+            ArrayList<Token> tokens = new ArrayList<>();
+            Matcher inputMatcher = lexerPattern.matcher(inputLine);
+            while(inputMatcher.find()) {
+                for(String name : symbols.keySet()) {
+                    if(inputMatcher.group(name) != null) {
+                        Token matchedToken = new Token(inputMatcher.group(name), symbols.get(name));
+                        tokens.add(matchedToken);
+                        break;
+                    }
+                }
+            }
+
+			ParseTreeNode recognizingResult = recognizes(grammarRules, startRule, tokens);
 			
 			if(recognizingResult == null) {
 				System.out.println("That line is not in the language");
@@ -31,85 +134,11 @@ public class EarleyRunner {
 	}
 	
 	/* Returns null if the line cannot be recognized */
-	public static ParseTreeNode recognizes(String line) {
-		ArrayList<Token> tokens = new ArrayList<>();
-		int currentIndex = 0;
-		while(currentIndex < line.length()) {
-			char currentCharacter = line.charAt(currentIndex);
-			if(currentCharacter == '(') {
-				Token currentToken = new Token("(", Symbol.OPEN_PARENTHESIS);
-				tokens.add(currentToken);
-				currentIndex++;
-			} else if(currentCharacter == ')') {
-				Token currentToken = new Token(")", Symbol.CLOSE_PARENTHESIS);
-				tokens.add(currentToken);
-				currentIndex++;	
-			} else if(currentCharacter == '+') {
-				Token currentToken = new Token("+", Symbol.PLUS);
-				tokens.add(currentToken);
-				currentIndex++;	
-			} else if(Character.isDigit(currentCharacter)) {
-				int startingIndex = currentIndex;
-				while(currentIndex < line.length() && Character.isDigit(line.charAt(currentIndex))) {
-					currentIndex++;
-				}
-				Token currentToken = new Token(line.substring(startingIndex, currentIndex), Symbol.INT);
-				tokens.add(currentToken);
-				// no currentIndex++ here
-			} else {
-				throw new RuntimeException("Encountered unknown symbol while reading input: " + line.charAt(currentIndex));
-			}
-		}
-		
-		// build the grammar
-		// first, create all the terminals and non-terminals
-		Terminal openParenthesisTerminal = new Terminal(Symbol.OPEN_PARENTHESIS);
-		Terminal closeParenthesisTerminal = new Terminal(Symbol.CLOSE_PARENTHESIS);
-		Terminal plusTerminal = new Terminal(Symbol.PLUS);
-		Terminal intTerminal = new Terminal(Symbol.INT);
-		Nonterminal sNonterminal = new Nonterminal("S");
-		Nonterminal eNonterminal = new Nonterminal("E");
-		// now build the rules
-		// S -> E
-		ArrayList<GrammarElement> startRuleRHS = new ArrayList<>();
-		startRuleRHS.add(eNonterminal);
-		GrammarRule startRule = new GrammarRule(sNonterminal, startRuleRHS);
-		// E -> INT
-		ArrayList<GrammarElement> intRuleRHS = new ArrayList<>();
-		intRuleRHS.add(intTerminal);
-		GrammarRule intRule = new GrammarRule(eNonterminal, intRuleRHS);
-		// E -> (E+E)
-		ArrayList<GrammarElement> parenthesizedRuleRHS = new ArrayList<>();
-		parenthesizedRuleRHS.add(openParenthesisTerminal);
-		parenthesizedRuleRHS.add(eNonterminal);
-		parenthesizedRuleRHS.add(plusTerminal);
-		parenthesizedRuleRHS.add(eNonterminal);
-		parenthesizedRuleRHS.add(closeParenthesisTerminal);
-		GrammarRule parenthesizedRule = new GrammarRule(eNonterminal, parenthesizedRuleRHS);
-		// E -> E+E
-		ArrayList<GrammarElement> plusRuleRHS = new ArrayList<>();
-		plusRuleRHS.add(eNonterminal);
-		plusRuleRHS.add(plusTerminal);
-		plusRuleRHS.add(eNonterminal);
-		GrammarRule plusRule = new GrammarRule(eNonterminal, plusRuleRHS);
-		// combine them into a single collection. organize the rules by the non-terminals on
-		// their left hand sides, for fast lookup later
-		HashMap<Nonterminal, ArrayList<GrammarRule>> grammarRules = new HashMap<>();
-		// first the only rule we have for S: S -> E
-		ArrayList<GrammarRule> sNonterminalRules = new ArrayList<>();
-		sNonterminalRules.add(startRule);
-		grammarRules.put(sNonterminal, sNonterminalRules);
-		// and then the three rules for E: E -> INT | (E+E) | E+E
-		ArrayList<GrammarRule> eNonterminalRules = new ArrayList<>();
-		eNonterminalRules.add(intRule);
-		eNonterminalRules.add(parenthesizedRule);
-		eNonterminalRules.add(plusRule);
-		grammarRules.put(eNonterminal, eNonterminalRules);
-		
+	public static ParseTreeNode recognizes(HashMap<Nonterminal, ArrayList<GrammarRule>> grammarRules, GrammarRule startRule, ArrayList<Token> tokens) {
 		// keep a list of sigma sets. In this list, index j will correspond to
 		// the sigma set right before the jth token.
 		ArrayList<HashSet<SigmaSetEntry>> sigmaSets = new ArrayList<>();
-		
+
 		// set up the first sigma set
 		HashSet<SigmaSetEntry> sigmaSet0 = new HashSet<SigmaSetEntry>();
 		sigmaSets.add(sigmaSet0);
@@ -293,10 +322,45 @@ public class EarleyRunner {
 			}
 		}
 	}
-	
-	public static enum Symbol {
-		INT, OPEN_PARENTHESIS, CLOSE_PARENTHESIS, PLUS 
-	}
+
+    public static class Symbol {
+
+        private String name;
+        private String pattern;
+
+        public Symbol(String n, String p) {
+            name = n;
+            pattern = p;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getPattern() {
+            return pattern;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if(! (other instanceof Symbol)) {
+                return false;
+            }
+            Symbol otherSymbol = (Symbol) other;
+            // TODO: should I check the pattern here too?
+            return name.equals(otherSymbol.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return name.hashCode() * 41 + pattern.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
 	
 	// TODO: Should probably override equals and hashCode here
 	public static class Token {
@@ -395,7 +459,7 @@ public class EarleyRunner {
 		
 		@Override
 		public String toString() {
-			return symbol.toString().toLowerCase();
+			return symbol.toString();
 		}
 	}
 	
