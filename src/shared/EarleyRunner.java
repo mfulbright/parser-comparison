@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 public class EarleyRunner {
 
-    public static final String GRAMMAR_FILE_NAME = "grammarmod_grammar.txt";
+    public static final String GRAMMAR_FILE_NAME = "grammar.txt";
 
     public static void main(String[] args) throws IOException {
 

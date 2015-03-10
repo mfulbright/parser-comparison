@@ -1,2 +1,2 @@
-# grammarmod
-A tool to allow developers to alter the grammars of programming languages
+# Parser
+This is a comparison of two different implementations of parsers
