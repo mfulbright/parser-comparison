@@ -42,56 +42,12 @@ public class EarleyRunner {
 
         // Map the names of nonterminals to the nonterminal instances
         HashMap<String, Nonterminal> nonterminals = new HashMap<>();
-        HashMap<Nonterminal, ArrayList<GrammarRule>> grammarRules = new HashMap<>();
-        GrammarRule startRule = null; // The first rule in the grammar must be the start rule
+        // The first rule is the start rule
+        GrammarRule startRule = parseGrammarRule(grammarFile.nextLine(), terminals, nonterminals);
+        Grammar grammar = new Grammar(startRule);
         while(grammarFile.hasNextLine()) {
-            line = grammarFile.nextLine();
-            // The format of each line should be "shared.Nonterminal = shared.GrammarElement shared.GrammarElement shared.GrammarElement"
-            String[] pieces = line.split(" ");
-            String nonterminalName = pieces[0];
-            Nonterminal lhsNonterminal;
-            if(nonterminals.containsKey(nonterminalName)) {
-                lhsNonterminal = nonterminals.get(nonterminalName);
-            } else {
-                lhsNonterminal = new Nonterminal(nonterminalName);
-                nonterminals.put(nonterminalName, lhsNonterminal);
-            }
-            ArrayList<GrammarElement> ruleRightHandSide = new ArrayList<>();
-            // pieces[1] will be the '='
-            for(int rhsIndex = 2; rhsIndex < pieces.length; rhsIndex++) {
-                String grammarElementName = pieces[rhsIndex];
-                if(terminals.containsKey(grammarElementName)) {
-                    ruleRightHandSide.add(terminals.get(grammarElementName));
-                } else {
-                    Nonterminal rhsNonterminal;
-                    if(nonterminals.containsKey(grammarElementName)) {
-                        rhsNonterminal = nonterminals.get(grammarElementName);
-                    } else {
-                        rhsNonterminal = new Nonterminal(grammarElementName);
-                        nonterminals.put(grammarElementName, rhsNonterminal);
-                    }
-                    ruleRightHandSide.add(rhsNonterminal);
-                }
-            }
-            GrammarRule newRule = new GrammarRule(lhsNonterminal, ruleRightHandSide);
-            // If this is the first rule, it must be the start rule
-            if(startRule == null) {
-                startRule = newRule;
-            }
-            // Add the new rule into the grammarRules map
-            if(grammarRules.containsKey(lhsNonterminal)) {
-                ArrayList<GrammarRule> nonterminalRules = grammarRules.get(lhsNonterminal);
-                nonterminalRules.add(newRule);
-            } else {
-                ArrayList<GrammarRule> nonterminalRules = new ArrayList<>();
-                nonterminalRules.add(newRule);
-                grammarRules.put(lhsNonterminal, nonterminalRules);
-            }
+            grammar.addRule(parseGrammarRule(grammarFile.nextLine(), terminals, nonterminals));
         }
-        assert(startRule != null);
-        // The start rule must be the only rule with that nonterminal
-        ArrayList<GrammarRule> startSymbolRules = grammarRules.get(startRule.getLeftHandSide());
-        assert(startSymbolRules.size() == 1);
 
         // Compile the lexer patterns into a regex matcher
         StringBuffer combinedRegexBuffer = new StringBuffer();
@@ -134,7 +90,7 @@ public class EarleyRunner {
                 continue;
             }
 
-            ParseTreeNode recognizingResult = recognizes(grammarRules, startRule, tokens);
+            ParseTreeNode recognizingResult = recognizes(tokens, grammar);
 
             if(recognizingResult == null) {
                 System.out.println("That line is not in the language");
@@ -145,8 +101,55 @@ public class EarleyRunner {
         }
     }
 
+    public static GrammarRule parseGrammarRule(String grammarRuleLine, HashMap<String, Terminal> terminals, HashMap<String, Nonterminal> nonterminals) {
+        // The format of each line should be "Nonterminal = GrammarElement GrammarElement GrammarElement"
+        String[] pieces = grammarRuleLine.split(" ");
+        String nonterminalName = pieces[0];
+        Nonterminal lhsNonterminal;
+        if(nonterminals.containsKey(nonterminalName)) {
+            lhsNonterminal = nonterminals.get(nonterminalName);
+        } else {
+            lhsNonterminal = new Nonterminal(nonterminalName);
+            nonterminals.put(nonterminalName, lhsNonterminal);
+        }
+        ArrayList<GrammarElement> ruleRightHandSide = new ArrayList<>();
+        // pieces[1] will be the '='
+        for(int rhsIndex = 2; rhsIndex < pieces.length; rhsIndex++) {
+            String grammarElementName = pieces[rhsIndex];
+            if(terminals.containsKey(grammarElementName)) {
+                ruleRightHandSide.add(terminals.get(grammarElementName));
+            } else {
+                Nonterminal rhsNonterminal;
+                if(nonterminals.containsKey(grammarElementName)) {
+                    rhsNonterminal = nonterminals.get(grammarElementName);
+                } else {
+                    rhsNonterminal = new Nonterminal(grammarElementName);
+                    nonterminals.put(grammarElementName, rhsNonterminal);
+                }
+                ruleRightHandSide.add(rhsNonterminal);
+            }
+        }
+        return new GrammarRule(lhsNonterminal, ruleRightHandSide);
+        /*
+        // If this is the first rule, it must be the start rule
+        if(startRule == null) {
+            startRule = newRule;
+        }
+        // Add the new rule into the grammarRules map
+        if(grammarRules.containsKey(lhsNonterminal)) {
+            ArrayList<GrammarRule> nonterminalRules = grammarRules.get(lhsNonterminal);
+            nonterminalRules.add(newRule);
+        } else {
+            ArrayList<GrammarRule> nonterminalRules = new ArrayList<>();
+            nonterminalRules.add(newRule);
+            grammarRules.put(lhsNonterminal, nonterminalRules);
+        }
+        */
+
+    }
+
     /* Returns null if the line cannot be recognized */
-    public static ParseTreeNode recognizes(HashMap<Nonterminal, ArrayList<GrammarRule>> grammarRules, GrammarRule startRule, ArrayList<Token> tokens) {
+    public static ParseTreeNode recognizes(ArrayList<Token> tokens, Grammar grammar) {
         // keep a list of sigma sets. In this list, index j will correspond to
         // the sigma set right before the jth token.
         ArrayList<HashSet<SigmaSetEntry>> sigmaSets = new ArrayList<>();
@@ -155,9 +158,10 @@ public class EarleyRunner {
         HashSet<SigmaSetEntry> sigmaSet0 = new HashSet<SigmaSetEntry>();
         sigmaSets.add(sigmaSet0);
         ArrayDeque<SigmaSetEntry> sigmaSet0ToProcess = new ArrayDeque<>();
+        GrammarRule startRule = grammar.getStartRule();
         SigmaSetEntry startRuleEntry = new SigmaSetEntry(startRule, 0, 0);
         sigmaSet0ToProcess.add(startRuleEntry);
-        fillSigmaSet(grammarRules, sigmaSets, 0, sigmaSet0ToProcess);
+        fillSigmaSet(grammar, sigmaSets, 0, sigmaSet0ToProcess);
 
         // process the input
         for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
@@ -180,7 +184,7 @@ public class EarleyRunner {
                 }
             }
 
-            fillSigmaSet(grammarRules, sigmaSets, tokenIndex + 1, toProcess);
+            fillSigmaSet(grammar, sigmaSets, tokenIndex + 1, toProcess);
         }
 
         SigmaSetEntry acceptingSigmaSetEntry = new SigmaSetEntry(startRule, startRule.getRightHandSide().size(), 0);
@@ -273,7 +277,7 @@ public class EarleyRunner {
         return currentParseTreeParent;
     }
 
-    public static void fillSigmaSet(HashMap<Nonterminal, ArrayList<GrammarRule>> grammarRules, ArrayList<HashSet<SigmaSetEntry>> sigmaSets, int currentSigmaSetIndex, ArrayDeque<SigmaSetEntry> toProcess) {
+    public static void fillSigmaSet(Grammar grammar, ArrayList<HashSet<SigmaSetEntry>> sigmaSets, int currentSigmaSetIndex, ArrayDeque<SigmaSetEntry> toProcess) {
         HashSet<SigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
         while(! toProcess.isEmpty()) {
             SigmaSetEntry processing = toProcess.remove();
@@ -290,7 +294,7 @@ public class EarleyRunner {
                 if(elementAfterCursor.isNonterminal()) {
                     // This is the Call and Start step (I've basically combined them in this implementation)
                     Nonterminal nonterminalAfterCursor = (Nonterminal) elementAfterCursor;
-                    ArrayList<GrammarRule> callableGrammarRules = grammarRules.get(nonterminalAfterCursor);
+                    ArrayList<GrammarRule> callableGrammarRules = grammar.getRulesWithLeftHandSide(nonterminalAfterCursor);
                     for(GrammarRule callableGrammarRule : callableGrammarRules) {
                         SigmaSetEntry callEntry = new SigmaSetEntry(callableGrammarRule, 0, currentSigmaSetIndex);
                         toProcess.add(callEntry);
