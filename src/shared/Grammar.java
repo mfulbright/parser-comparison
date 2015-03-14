@@ -2,6 +2,7 @@ package shared;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 
 public class Grammar {
 
@@ -46,5 +47,9 @@ public class Grammar {
 
     public ArrayList<GrammarRule> getRulesWithLeftHandSide(Nonterminal lhs) {
         return grammarRules.get(lhs);
+    }
+
+    public Set<Nonterminal> getNonterminals() {
+        return grammarRules.keySet();
     }
 }
