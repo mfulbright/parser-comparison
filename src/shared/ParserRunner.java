@@ -1,6 +1,6 @@
 package shared;
 
-import earleyparser.EarleyParser;
+import gfgparser.GFGParser;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,7 +59,7 @@ public class ParserRunner {
         }
         Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
 
-        Parser parser = new EarleyParser(grammar);
+        Parser parser = new GFGParser(grammar);
 
         Scanner input = new Scanner(System.in);
         InputLoop:
@@ -100,7 +100,8 @@ public class ParserRunner {
                 System.out.println("That line is not in the language");
             } else {
                 System.out.println("That line is in the language");
-                printParseTree(parsingResult);
+                // Just for now, while GFG parsing is not actually parsing
+                // printParseTree(parsingResult);
             }
         }
     }

@@ -1,9 +1,9 @@
 package gfgparser;
 
-import shared.GrammarRule;
 import shared.Nonterminal;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class StartEndGFGNode implements GFGNode {
 
@@ -21,8 +21,12 @@ public class StartEndGFGNode implements GFGNode {
         nextNodes.put(rule, node);
     }
 
-    public GFGNode getNextNodeForGrammarRule(GrammarRule rule) {
+    public GFGNode getNextNodeForGrammarRule(CursorGrammarRule rule) {
         return nextNodes.get(rule);
+    }
+
+    public Map<CursorGrammarRule, GFGNode> getNextNodes() {
+        return nextNodes;
     }
 
     public Nonterminal getNonterminal() {
