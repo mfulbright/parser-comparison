@@ -3,6 +3,7 @@ package gfgparser;
 import shared.GrammarElement;
 import shared.GrammarRule;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 public class CursorGrammarRule {
@@ -11,7 +12,7 @@ public class CursorGrammarRule {
     private int cursorIndex;
 
     public CursorGrammarRule(GrammarRule rule, int index) {
-        if(index < 0 || index > grammarRule.getRightHandSide().size()) {
+        if(index < 0 || index > rule.getRightHandSide().size()) {
             throw new IllegalArgumentException("Cursor index must be in bounds");
         }
         grammarRule = rule;
@@ -65,5 +66,21 @@ public class CursorGrammarRule {
     @Override
     public int hashCode() {
         return Objects.hash(grammarRule, cursorIndex);
+    }
+
+    @Override
+    public String toString() {
+       String rhs = "";
+        ArrayList<GrammarElement> ruleRHS = grammarRule.getRightHandSide();
+        for(int i = 0; i < cursorIndex; i++) {
+            rhs += ruleRHS.get(i) + " ";
+        }
+        rhs += ". ";
+        for(int i = cursorIndex; i < ruleRHS.size(); i++) {
+            rhs += ruleRHS.get(i) + " ";
+        }
+        rhs = rhs.substring(0, rhs.length() - 1);
+
+        return grammarRule.getLeftHandSide() + " -> " + rhs;
     }
 }

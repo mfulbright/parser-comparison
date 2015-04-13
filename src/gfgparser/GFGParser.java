@@ -46,9 +46,9 @@ public class GFGParser implements Parser {
                     if(currentElement.isNonterminal()) {
                         // we need to add call and return edges
                         Nonterminal currentNonterminal = (Nonterminal) currentElement;
-                        StartEndGFGNode currentNonterminalStartNode = startNodes.get(nonterminal);
+                        StartEndGFGNode currentNonterminalStartNode = startNodes.get(currentNonterminal);
                         currentNode.setNextNode(currentNonterminalStartNode);
-                        StartEndGFGNode currentNonterminalEndNode = endNodes.get(nonterminal);
+                        StartEndGFGNode currentNonterminalEndNode = endNodes.get(currentNonterminal);
                         currentNonterminalEndNode.addNextNode(nextCursorRule, nextRuleNode);
                     } else {
                         currentNode.setNextNode(nextRuleNode);
@@ -109,7 +109,8 @@ public class GFGParser implements Parser {
 
         GFGNode acceptingNode = endNodes.get(grammar.getStartRule().getLeftHandSide());
         GFGSigmaSetEntry acceptingEntry = new GFGSigmaSetEntry(acceptingNode, 0);
-        if(sigmaSets.get(tokens.size()).contains(acceptingEntry)) {
+        HashSet<GFGSigmaSetEntry> finalSigmaSet = sigmaSets.get(tokens.size());
+        if(finalSigmaSet.contains(acceptingEntry)) {
             return new ParseTreeParent(null, null);
         } else {
             return null;
@@ -160,7 +161,10 @@ public class GFGParser implements Parser {
                         }
                         Nonterminal nextNonterminal = (Nonterminal) nextElement;
                         if(nextNonterminal.equals(endingNonterminal)) {
-                            GFGNode continuingNode = possibleRuleNode.getNextNode();
+                            // This was a match
+                            // We need to look up the next GFG node in this end node's map
+                            CursorGrammarRule nextCursorRule = cursorRule.createNext();
+                            GFGNode continuingNode = startEndNode.getNextNodeForGrammarRule(nextCursorRule);
                             int continuingTag = possibleEndingEntry.getTag();
                             GFGSigmaSetEntry newEntry = new GFGSigmaSetEntry(continuingNode, continuingTag);
                             toProcess.add(newEntry);
