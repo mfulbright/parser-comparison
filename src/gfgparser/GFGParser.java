@@ -28,6 +28,7 @@ public class GFGParser implements Parser {
             StartEndGFGNode endNode = new StartEndGFGNode(nonterminal, false);
             endNodes.put(nonterminal, endNode);
         }
+
         // now add all the call edges
         for(Nonterminal nonterminal : nonterminals) {
             StartEndGFGNode startNode = startNodes.get(nonterminal);
@@ -62,66 +63,147 @@ public class GFGParser implements Parser {
 
     @Override
     public ParseTreeNode parse(List<Token> tokens) {
-        ArrayDeque<GFGPath> initialToProcess = new ArrayDeque<>();
-        GFGPath startPath = new GFGPath();
-        startPath.addNode(startNodes.get(grammar.getStartRule().getLeftHandSide()));
-        initialToProcess.add(startPath);
-        HashSet<GFGPath> possiblePaths = extendPaths(initialToProcess);
+        // keep a list of sigma sets. In this list, index j will correspond to
+        // the sigma set right before the jth token.
+        ArrayList<HashSet<GFGSigmaSetEntry>> sigmaSets = new ArrayList<>();
 
+        // set up the first sigma set
+        HashSet<GFGSigmaSetEntry> sigmaSet0 = new HashSet<>();
+        sigmaSets.add(sigmaSet0);
+        ArrayDeque<GFGSigmaSetEntry> sigmaSet0ToProcess = new ArrayDeque<>();
+        GrammarRule startRule = grammar.getStartRule();
+        Nonterminal startNonterminal = startRule.getLeftHandSide();
+        GFGNode startGFGNode = startNodes.get(startNonterminal);
+        GFGSigmaSetEntry startRuleEntry = new GFGSigmaSetEntry(startGFGNode, 0);
+        sigmaSet0ToProcess.add(startRuleEntry);
+        fillSigmaSet(sigmaSets, 0, sigmaSet0ToProcess);
+
+        // process the input
         for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
             Token currentToken = tokens.get(tokenIndex);
-            ArrayDeque<GFGPath> toProcess = new ArrayDeque<>();
-            // Java collections doesn't give me a good way to iterate over a set and
-            // remove/modify elements as I go, so I have to structure my list this way
-            while(! possiblePaths.isEmpty()) {
-                Iterator<GFGPath> pathsIterator = possiblePaths.iterator();
-                GFGPath possiblePath = pathsIterator.next();
-                pathsIterator.remove();
+            HashSet<GFGSigmaSetEntry> previousSigmaSet = sigmaSets.get(tokenIndex);
+            HashSet<GFGSigmaSetEntry> nextSigmaSet = new HashSet<>();
+            sigmaSets.add(nextSigmaSet);
+            ArrayDeque<GFGSigmaSetEntry> toProcess = new ArrayDeque<>();
 
-                GFGNode lastNode = possiblePath.getLastNode();
-                // Pretty much all "lastNode"s should be RuleGFGNodes that are right
-                // before a terminal. However, there is an exception: if we finished
-                // the start rule, the lastNode will be an end node. So if that's the
-                // case, just skip it.
-                if(lastNode.isStartEndGFGNode()) {
+            for(GFGSigmaSetEntry previousEntry : previousSigmaSet) {
+                GFGNode entryNode = previousEntry.getGFGNode();
+                if(entryNode.isStartEndGFGNode()) {
                     continue;
                 }
-                RuleGFGNode lastRuleNode = (RuleGFGNode) lastNode;
-                CursorGrammarRule lastCursorGrammarRule = lastRuleNode.getCursorGrammarRule();
-                GrammarRule lastRule = lastCursorGrammarRule.getGrammarRule();
-                int cursorIndex = lastCursorGrammarRule.getCursorIndex();
-                assert(cursorIndex < lastRule.getRightHandSide().size());
-                GrammarElement nextGrammarElement = lastRule.getRightHandSide().get(cursorIndex);
-                assert(! nextGrammarElement.isNonterminal());
-                Terminal nextTerminal = (Terminal) nextGrammarElement;
-                if(currentToken.getType().equals(nextTerminal.getSymbol())) {
-                    // add one node to the path, and add it to the toProcess queue
-                    possiblePath.addNode(lastRuleNode.getNextNode());
-                    toProcess.add(possiblePath);
+                RuleGFGNode entryRuleNode = (RuleGFGNode) entryNode;
+                CursorGrammarRule entryCursorRule = entryRuleNode.getCursorGrammarRule();
+                if(! entryCursorRule.cursorAtEnd() && ! entryCursorRule.getNextGrammarElement().isNonterminal()) {
+                    Terminal terminalAfterCursor = (Terminal) entryCursorRule.getNextGrammarElement();
+                    if(terminalAfterCursor.getSymbol() == currentToken.getType()) {
+                        GFGNode nextNode = entryRuleNode.getNextNode();
+                        int nextTag = previousEntry.getTag();
+                        GFGSigmaSetEntry scanEntry = new GFGSigmaSetEntry(nextNode, nextTag);
+                        toProcess.add(scanEntry);
+                    }
                 }
             }
 
-            // now that we've done the scan step for all the paths, flood them as far
-            // as they'll go
-            possiblePaths = extendPaths(toProcess);
+            fillSigmaSet(sigmaSets, tokenIndex + 1, toProcess);
         }
 
-        // for now, it's just going to be a recognizer
         GFGNode acceptingNode = endNodes.get(grammar.getStartRule().getLeftHandSide());
-        for(GFGPath possiblePath : possiblePaths) {
-            if(possiblePath.getLastNode() == acceptingNode) {
-                return new ParseTreeParent(null, null);
-            }
+        GFGSigmaSetEntry acceptingEntry = new GFGSigmaSetEntry(acceptingNode, 0);
+        if(sigmaSets.get(tokens.size()).contains(acceptingEntry)) {
+            return new ParseTreeParent(null, null);
+        } else {
+            return null;
         }
-        return null;
     }
 
-    private HashSet<GFGPath> extendPaths(ArrayDeque<GFGPath> toProcess) {
-        HashSet<GFGPath> extendedPaths = new HashSet<>();
+    private void fillSigmaSet(ArrayList<HashSet<GFGSigmaSetEntry>> sigmaSets,
+                              int currentSigmaSetIndex,
+                              ArrayDeque<GFGSigmaSetEntry> toProcess) {
+        HashSet<GFGSigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
         while(! toProcess.isEmpty()) {
-            GFGPath currentPath = toProcess.remove();
+            GFGSigmaSetEntry processing = toProcess.remove();
+            if(currentSigmaSet.contains(processing)) {
+                continue;
+            }
+            currentSigmaSet.add(processing);
+
+            GFGNode entryNode = processing.getGFGNode();
+            if(entryNode.isStartEndGFGNode()) {
+                StartEndGFGNode startEndNode = (StartEndGFGNode) entryNode;
+                if(startEndNode.isStartNode()) {
+                    // This is the Start step
+                    Map<CursorGrammarRule, GFGNode> nextNodes = startEndNode.getNextNodes();
+                    int currentTag = processing.getTag();
+                    for(CursorGrammarRule cursorRule : nextNodes.keySet()) {
+                        GFGNode nextNode = nextNodes.get(cursorRule);
+                        GFGSigmaSetEntry newEntry = new GFGSigmaSetEntry(nextNode, currentTag);
+                        toProcess.add(newEntry);
+                    }
+                } else {
+                    // This is the End step
+                    int endingTag = processing.getTag();
+                    Nonterminal endingNonterminal = startEndNode.getNonterminal();
+                    HashSet<GFGSigmaSetEntry> previousSigmaSet = sigmaSets.get(endingTag);
+                    for(GFGSigmaSetEntry possibleEndingEntry : previousSigmaSet) {
+                        GFGNode possibleEndingNode = possibleEndingEntry.getGFGNode();
+                        if(possibleEndingNode.isStartEndGFGNode()) {
+                            continue;
+                        }
+                        RuleGFGNode possibleRuleNode = (RuleGFGNode) possibleEndingNode;
+                        CursorGrammarRule cursorRule = possibleRuleNode.getCursorGrammarRule();
+                        if(cursorRule.cursorAtEnd()) {
+                            continue;
+                        }
+                        GrammarElement nextElement = cursorRule.getNextGrammarElement();
+                        if(! nextElement.isNonterminal()) {
+                            continue;
+                        }
+                        Nonterminal nextNonterminal = (Nonterminal) nextElement;
+                        if(nextNonterminal.equals(endingNonterminal)) {
+                            GFGNode continuingNode = possibleRuleNode.getNextNode();
+                            int continuingTag = possibleEndingEntry.getTag();
+                            GFGSigmaSetEntry newEntry = new GFGSigmaSetEntry(continuingNode, continuingTag);
+                            toProcess.add(newEntry);
+                        }
+                    }
+                }
+            } else {
+                RuleGFGNode ruleNode = (RuleGFGNode) entryNode;
+                CursorGrammarRule cursorRule = ruleNode.getCursorGrammarRule();
+                if(cursorRule.cursorAtEnd()) {
+                    // It's the Exit step
+                    GFGNode endNode = ruleNode.getNextNode();
+                    int currentTag = processing.getTag();
+                    GFGSigmaSetEntry newEntry = new GFGSigmaSetEntry(endNode, currentTag);
+                    toProcess.add(newEntry);
+                } else {
+                    GrammarElement nextElement = cursorRule.getNextGrammarElement();
+                    if(nextElement.isNonterminal()) {
+                        // It's the Call step
+                        GFGNode startNode = ruleNode.getNextNode();
+                        GFGSigmaSetEntry newEntry = new GFGSigmaSetEntry(startNode, currentSigmaSetIndex);
+                        toProcess.add(newEntry);
+                    } else {
+                        // It's the Scan step
+                        // We're done flooding here, so just drop this node
+                    }
+                }
+            }
+        }
+    }
+
+    private HashSet<GFGPath> extendPaths(ArrayDeque<GFGPath> initialToProcess) {
+        HashSet<GFGPath> extendedPaths = new HashSet<>();
+        while(! initialToProcess.isEmpty()) {
+            GFGPath startingPath = initialToProcess.remove();
+            ArrayDeque<GFGPath> currentToProcess = new ArrayDeque<>();
+            HashSet<CursorGrammarRule> processedRules = new HashSet<>();
+            currentToProcess.add(startingPath);
+            while(! currentToProcess.isEmpty()) {
+                GFGPath currentPath = currentToProcess.remove();
+            }
             while(true) {
-                GFGNode lastNode = currentPath.getLastNode();
+                GFGNode lastNode = startingPath.getLastNode();
                 if(lastNode.isStartEndGFGNode()) {
                     StartEndGFGNode lastStartEndNode = (StartEndGFGNode) lastNode;
                     if(lastStartEndNode.isStartNode()) {
@@ -129,20 +211,21 @@ public class GFGParser implements Parser {
                         // current path for each of the possible next nodes in the
                         // GFG. So if there are n next nodes in the GFG, we make
                         // n-1 copies of the current path, and put those in the
-                        // toProcess queue. Then, we take the last of the next nodes,
+                        // initialToProcess queue. Then, we take the last of the next nodes,
                         // apply it to the current copy of this path, and keep going.
                         Map<CursorGrammarRule, GFGNode> nextNodes = lastStartEndNode.getNextNodes();
                         int numProcessed = 0;
                         for(CursorGrammarRule nextRule : nextNodes.keySet()) {
                             GFGNode nextNode = nextNodes.get(nextRule);
                             if(numProcessed < nextNodes.size() - 1) {
-                                GFGPath copy = currentPath.copy();
+                                GFGPath copy = startingPath.copy();
                                 copy.addNode(nextNode);
-                                toProcess.add(copy);
+                                initialToProcess.add(copy);
                             } else {
                                 // this is the nth node - we just apply it to the
                                 // current path
-                                currentPath.addNode(nextNode);
+                                startingPath.addNode(nextNode);
+                                initialToProcess.add(startingPath);
                             }
                             numProcessed++;
                         }
@@ -150,17 +233,17 @@ public class GFGParser implements Parser {
                         // this is the return step. Here we pop a CursorGrammarRule off our stack,
                         // which tells us where we're going back to. Then we can consult the end
                         // node and retrieve the correct next node to go to.
-                        CursorGrammarRule returnRule = currentPath.peekCallStack();
+                        CursorGrammarRule returnRule = startingPath.peekCallStack();
                         if(returnRule == null) {
                             // The only time there shouldn't be a return address on the stack is
                             // when we've finished processing the start nonterminal. Assuming that's
                             // the case, we can just add our current path to the final set and
                             // be done.
-                            extendedPaths.add(currentPath);
+                            extendedPaths.add(startingPath);
                             break;
                         }
-                        currentPath.popCallStack();
-                        currentPath.addNode(lastStartEndNode.getNextNodeForGrammarRule(returnRule));
+                        startingPath.popCallStack();
+                        startingPath.addNode(lastStartEndNode.getNextNodeForGrammarRule(returnRule));
                     }
                 } else {
                     RuleGFGNode lastRuleNode = (RuleGFGNode) lastNode;
@@ -171,7 +254,7 @@ public class GFGParser implements Parser {
                         // we've gotten to the very end of the rule. The next node will be the
                         // end node, so just add that to the current path and move on to the
                         // next iteration
-                        currentPath.addNode(lastRuleNode.getNextNode());
+                        startingPath.addNode(lastRuleNode.getNextNode());
                     } else {
                         GrammarElement nextElement = lastRule.getRightHandSide().get(cursorIndex);
                         if(nextElement.isNonterminal()) {
@@ -180,13 +263,13 @@ public class GFGParser implements Parser {
                             // potential node it could return to, and has them indexed by their CursorGrammarRule.
                             // So we simply add the next CursorGrammarRule to our stack right now and then continue.
                             CursorGrammarRule nextCursorGrammarRule = new CursorGrammarRule(lastRule, cursorIndex + 1);
-                            currentPath.pushCallStack(nextCursorGrammarRule);
+                            startingPath.pushCallStack(nextCursorGrammarRule);
                             // Now we just continue with the next node, which will start the "call"
-                            currentPath.addNode(lastRuleNode.getNextNode());
+                            startingPath.addNode(lastRuleNode.getNextNode());
                         } else {
                             // we've come up against a terminal, so we're done extending this path.
                             // just add it to the final set and we're done
-                            extendedPaths.add(currentPath);
+                            extendedPaths.add(startingPath);
                             break;
                         }
                     }

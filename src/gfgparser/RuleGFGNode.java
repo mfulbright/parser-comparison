@@ -1,5 +1,7 @@
 package gfgparser;
 
+import java.util.Objects;
+
 public class RuleGFGNode implements GFGNode {
 
     private CursorGrammarRule cursorGrammarRule;
@@ -30,5 +32,24 @@ public class RuleGFGNode implements GFGNode {
     @Override
     public boolean isStartEndGFGNode() {
         return false;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if(! (other instanceof RuleGFGNode)) {
+            return false;
+        }
+        RuleGFGNode otherNode = (RuleGFGNode) other;
+        return cursorGrammarRule.equals(otherNode.cursorGrammarRule);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(cursorGrammarRule);
+    }
+
+    @Override
+    public String toString() {
+        return cursorGrammarRule.toString();
     }
 }

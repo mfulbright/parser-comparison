@@ -1,6 +1,7 @@
 package shared;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class GrammarRule {
 
@@ -36,10 +37,7 @@ public class GrammarRule {
 
     @Override
     public int hashCode() {
-        int hash = leftHandSide.hashCode();
-        hash *= 17;
-        hash += rightHandSide.hashCode();
-        return hash;
+        return Objects.hash(leftHandSide, rightHandSide);
     }
 
     @Override

@@ -4,15 +4,16 @@ import shared.GrammarElement;
 import shared.GrammarRule;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
-public class SigmaSetEntry {
+public class EarleySigmaSetEntry {
 
     private GrammarRule rule;
     // this will be in the range [0, rule.getRightHandSide().size()]
     private int cursorIndex;
     private int tag;
 
-    public SigmaSetEntry(GrammarRule r, int cI, int t) {
+    public EarleySigmaSetEntry(GrammarRule r, int cI, int t) {
         rule = r;
         cursorIndex = cI;
         tag = t;
@@ -32,10 +33,10 @@ public class SigmaSetEntry {
 
     @Override
     public boolean equals(Object other) {
-        if(! (other instanceof SigmaSetEntry)) {
+        if(! (other instanceof EarleySigmaSetEntry)) {
             return false;
         }
-        SigmaSetEntry otherSigmaSetEntry = (SigmaSetEntry) other;
+        EarleySigmaSetEntry otherSigmaSetEntry = (EarleySigmaSetEntry) other;
         return rule.equals(otherSigmaSetEntry.rule) &&
                 cursorIndex == otherSigmaSetEntry.cursorIndex &&
                 tag == otherSigmaSetEntry.tag;
@@ -43,12 +44,7 @@ public class SigmaSetEntry {
 
     @Override
     public int hashCode() {
-        int hash = rule.hashCode();
-        hash *= 31;
-        hash += cursorIndex;
-        hash *= 31;
-        hash += tag;
-        return hash;
+        return Objects.hash(rule, cursorIndex, tag);
     }
 
     @Override

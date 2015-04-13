@@ -1,5 +1,7 @@
 package shared;
 
+import java.util.Objects;
+
 public class Terminal implements GrammarElement {
 
     private Symbol symbol;
@@ -27,7 +29,7 @@ public class Terminal implements GrammarElement {
 
     @Override
     public int hashCode() {
-        return symbol.hashCode();
+        return Objects.hash(symbol);
     }
 
     @Override

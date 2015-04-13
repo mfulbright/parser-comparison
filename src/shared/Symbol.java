@@ -1,5 +1,7 @@
 package shared;
 
+import java.util.Objects;
+
 public class Symbol {
 
     private String name;
@@ -30,7 +32,7 @@ public class Symbol {
 
     @Override
     public int hashCode() {
-        return name.hashCode() * 41 + pattern.hashCode();
+        return Objects.hash(name, pattern);
     }
 
     @Override
