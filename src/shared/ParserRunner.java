@@ -100,8 +100,7 @@ public class ParserRunner {
                 System.out.println("That line is not in the language");
             } else {
                 System.out.println("That line is in the language");
-                // Just for now, while GFG parsing is not actually parsing
-                // printParseTree(parsingResult);
+                printParseTree(parsingResult);
             }
         }
     }

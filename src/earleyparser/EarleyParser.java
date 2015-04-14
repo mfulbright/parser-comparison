@@ -75,7 +75,6 @@ public class EarleyParser implements Parser{
         Stack<EarleySigmaSetEntry> callStack = new Stack<>();
 
         while(! currentSigmaSetEntry.equals(startRuleEntry)) {
-            //System.out.println(currentSigmaSetEntry);
             int cursorIndex = currentSigmaSetEntry.getCursorIndex();
             if(cursorIndex > 0) {
                 // we can keep working backwards through the current rule
