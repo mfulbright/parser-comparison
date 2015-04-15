@@ -1,5 +1,6 @@
 package gfgparser;
 
 public interface GFGNode {
-    public boolean isStartEndGFGNode();
+    // This is a blank interface, just used to give multiple classes a common
+    // name
 }

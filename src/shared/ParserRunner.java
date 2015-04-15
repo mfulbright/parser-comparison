@@ -94,13 +94,14 @@ public class ParserRunner {
                 continue;
             }
 
-            ParseTreeNode parsingResult = parser.parse(tokens);
+            EarleyParseTreeNode parsingResult = parser.parse(tokens);
 
             if(parsingResult == null) {
                 System.out.println("That line is not in the language");
             } else {
                 System.out.println("That line is in the language");
-                printParseTree(parsingResult);
+                // Just a recognizer for now
+                // printParseTree(parsingResult);
             }
         }
     }
@@ -136,16 +137,16 @@ public class ParserRunner {
         return new GrammarRule(lhsNonterminal, ruleRightHandSide);
     }
 
-    public static void printParseTree(ParseTreeNode root) {
+    public static void printParseTree(EarleyParseTreeNode root) {
         printParseTreeHelper("", root);
     }
 
-    public static void printParseTreeHelper(String prefix, ParseTreeNode root) {
+    public static void printParseTreeHelper(String prefix, EarleyParseTreeNode root) {
         System.out.print(prefix);
         System.out.println(root);
         if(! root.isLeafNode()) {
-            ParseTreeParent parent = (ParseTreeParent) root;
-            for(ParseTreeNode child : parent.getChildren()) {
+            EarleyParseTreeParent parent = (EarleyParseTreeParent) root;
+            for(EarleyParseTreeNode child : parent.getChildren()) {
                 printParseTreeHelper(prefix + " ", child);
             }
         }

@@ -18,7 +18,7 @@ public class EarleyParser implements Parser{
     }
 
     @Override
-    public ParseTreeNode parse(List<Token> tokens) {
+    public EarleyParseTreeNode parse(List<Token> tokens) {
         // keep a list of sigma sets. In this list, index j will correspond to
         // the sigma set right before the jth token.
         ArrayList<HashSet<EarleySigmaSetEntry>> sigmaSets = new ArrayList<>();
@@ -62,7 +62,7 @@ public class EarleyParser implements Parser{
         }
 
         // The recognizing was successful - rebuild the parse tree
-        ParseTreeParent currentParseTreeParent = new ParseTreeParent(null, startRule);
+        EarleyParseTreeParent currentParseTreeParent = new EarleyParseTreeParent(null, startRule);
         int currentSigmaSetIndex = tokens.size();
         HashSet<EarleySigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
         EarleySigmaSetEntry currentSigmaSetEntry = null;
@@ -110,7 +110,7 @@ public class EarleyParser implements Parser{
                         lowerSigmaSetEntry = possible;
                         break;
                     }
-                    ParseTreeParent previousElementParent = new ParseTreeParent(currentParseTreeParent, lowerSigmaSetEntry.getGrammarRule());
+                    EarleyParseTreeParent previousElementParent = new EarleyParseTreeParent(currentParseTreeParent, lowerSigmaSetEntry.getGrammarRule());
                     currentParseTreeParent.getChildren().add(0, previousElementParent);
                     currentParseTreeParent = previousElementParent;
                     callStack.push(currentSigmaSetEntry);
@@ -118,7 +118,7 @@ public class EarleyParser implements Parser{
                 } else {
                     // Reverse the scan rule
                     Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                    ParseTreeLeaf terminalNode = new ParseTreeLeaf(currentParseTreeParent, scannedToken);
+                    EarleyParseTreeLeaf terminalNode = new EarleyParseTreeLeaf(currentParseTreeParent, scannedToken);
                     currentParseTreeParent.getChildren().add(0, terminalNode);
                     // Find the previous sigma set entry
                     currentSigmaSetIndex--;
@@ -162,7 +162,7 @@ public class EarleyParser implements Parser{
                 if(elementAfterCursor.isNonterminal()) {
                     // This is the Call and Start step (I've basically combined them in this implementation)
                     Nonterminal nonterminalAfterCursor = (Nonterminal) elementAfterCursor;
-                    ArrayList<GrammarRule> callableGrammarRules = grammar.getRulesWithLeftHandSide(nonterminalAfterCursor);
+                    List<GrammarRule> callableGrammarRules = grammar.getRulesWithLeftHandSide(nonterminalAfterCursor);
                     for(GrammarRule callableGrammarRule : callableGrammarRules) {
                         EarleySigmaSetEntry callEntry = new EarleySigmaSetEntry(callableGrammarRule, 0, currentSigmaSetIndex);
                         toProcess.add(callEntry);

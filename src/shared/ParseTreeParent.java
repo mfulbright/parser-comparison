@@ -1,33 +1,43 @@
 package shared;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class ParseTreeParent implements ParseTreeNode {
 
     private ParseTreeParent parent;
-    private GrammarRule grammarRule;
+    private Nonterminal nonterminal;
     private ArrayList<ParseTreeNode> children;
 
-    public ParseTreeParent(ParseTreeParent p, GrammarRule g) {
+    public ParseTreeParent(ParseTreeParent p, Nonterminal n) {
         parent = p;
-        grammarRule = g;
-        children = new ArrayList<ParseTreeNode>();
-    }
-
-    public boolean isLeafNode() {
-        return false;
+        nonterminal = n;
+        children = new ArrayList<>();
     }
 
     public ParseTreeParent getParent() {
         return parent;
     }
 
-    public ArrayList<ParseTreeNode> getChildren() {
+    public Nonterminal getNonterminal() {
+        return nonterminal;
+    }
+
+    public List<ParseTreeNode> getChildren() {
         return children;
     }
 
-    @Override
     public String toString() {
-        return grammarRule.toString();
+        String rhs = "";
+        for(int i = 0; i < children.size(); i++) {
+            ParseTreeNode child = children.get(i);
+            if(child instanceof ParseTreeParent) {
+                rhs += ((ParseTreeParent) child).getNonterminal() + " ";
+            } else {
+                rhs += ((ParseTreeLeaf) child).getSymbol() + " ";
+            }
+        }
+        rhs = rhs.substring(0, rhs.length() - 1);
+        return nonterminal + " -> " + rhs;
     }
 }

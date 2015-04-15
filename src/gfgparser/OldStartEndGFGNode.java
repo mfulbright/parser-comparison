@@ -6,27 +6,27 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class StartEndGFGNode implements GFGNode {
+public class OldStartEndGFGNode implements OldGFGNode {
 
     private Nonterminal nonterminal;
     private boolean isStartNode;
-    private HashMap<CursorGrammarRule, GFGNode> nextNodes;
+    private HashMap<CursorGrammarRule, OldGFGNode> nextNodes;
 
-    public StartEndGFGNode(Nonterminal n, boolean i) {
+    public OldStartEndGFGNode(Nonterminal n, boolean i) {
         nonterminal = n;
         isStartNode = i;
         nextNodes = new HashMap<>();
     }
 
-    public void addNextNode(CursorGrammarRule rule, GFGNode node) {
+    public void addNextNode(CursorGrammarRule rule, OldGFGNode node) {
         nextNodes.put(rule, node);
     }
 
-    public GFGNode getNextNodeForGrammarRule(CursorGrammarRule rule) {
+    public OldGFGNode getNextNodeForGrammarRule(CursorGrammarRule rule) {
         return nextNodes.get(rule);
     }
 
-    public Map<CursorGrammarRule, GFGNode> getNextNodes() {
+    public Map<CursorGrammarRule, OldGFGNode> getNextNodes() {
         return nextNodes;
     }
 
@@ -45,10 +45,10 @@ public class StartEndGFGNode implements GFGNode {
 
     @Override
     public boolean equals(Object other) {
-        if(! (other instanceof StartEndGFGNode)) {
+        if(! (other instanceof OldStartEndGFGNode)) {
             return false;
         }
-        StartEndGFGNode otherNode = (StartEndGFGNode) other;
+        OldStartEndGFGNode otherNode = (OldStartEndGFGNode) other;
         return nonterminal.equals(otherNode.nonterminal) &&
                 isStartNode == otherNode.isStartNode;
     }

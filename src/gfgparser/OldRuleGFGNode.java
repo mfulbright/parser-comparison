@@ -2,22 +2,22 @@ package gfgparser;
 
 import java.util.Objects;
 
-public class RuleGFGNode implements GFGNode {
+public class OldRuleGFGNode implements OldGFGNode {
 
     private CursorGrammarRule cursorGrammarRule;
-    private GFGNode nextNode;
+    private OldGFGNode nextNode;
 
-    public RuleGFGNode(CursorGrammarRule cgr) {
+    public OldRuleGFGNode(CursorGrammarRule cgr) {
         // leave nextNode null for now
         this(cgr, null);
     }
 
-    public RuleGFGNode(CursorGrammarRule cgr, GFGNode next) {
+    public OldRuleGFGNode(CursorGrammarRule cgr, OldGFGNode next) {
         cursorGrammarRule = cgr;
         nextNode = next;
     }
 
-    public GFGNode getNextNode() {
+    public OldGFGNode getNextNode() {
         return nextNode;
     }
 
@@ -25,7 +25,7 @@ public class RuleGFGNode implements GFGNode {
         return cursorGrammarRule;
     }
 
-    public void setNextNode(GFGNode nextNode) {
+    public void setNextNode(OldGFGNode nextNode) {
         this.nextNode = nextNode;
     }
 
@@ -36,10 +36,10 @@ public class RuleGFGNode implements GFGNode {
 
     @Override
     public boolean equals(Object other) {
-        if(! (other instanceof RuleGFGNode)) {
+        if(! (other instanceof OldRuleGFGNode)) {
             return false;
         }
-        RuleGFGNode otherNode = (RuleGFGNode) other;
+        OldRuleGFGNode otherNode = (OldRuleGFGNode) other;
         return cursorGrammarRule.equals(otherNode.cursorGrammarRule);
     }
 

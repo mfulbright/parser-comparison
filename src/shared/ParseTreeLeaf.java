@@ -10,8 +10,16 @@ public class ParseTreeLeaf implements ParseTreeNode {
         token = t;
     }
 
-    public boolean isLeafNode() {
-        return true;
+    public ParseTreeParent getParent() {
+        return parent;
+    }
+
+    public Token getToken() {
+        return token;
+    }
+
+    public Symbol getSymbol() {
+        return token.getType();
     }
 
     @Override
