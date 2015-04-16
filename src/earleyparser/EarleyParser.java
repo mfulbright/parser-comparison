@@ -2,10 +2,7 @@ package earleyparser;
 
 import shared.*;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class EarleyParser implements Parser{
 
@@ -59,94 +56,61 @@ public class EarleyParser implements Parser{
         EarleySigmaSetEntry acceptingSigmaSetEntry = new EarleySigmaSetEntry(acceptingCursorRule, 0);
         if (! sigmaSets.get(tokens.size()).contains(acceptingSigmaSetEntry)) {
             return null;
-        } else {
-            return new ParseTreeParent(null, null);
         }
-        /*
 
         // The recognizing was successful - rebuild the parse tree
-        EarleyParseTreeParent currentParseTreeParent = new EarleyParseTreeParent(null, startRule);
+        ParseTreeParent currentParseTreeParent = new ParseTreeParent(null, startRule.getLeftHandSide());
         int currentSigmaSetIndex = tokens.size();
-        HashSet<OldEarleySigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-        OldEarleySigmaSetEntry currentSigmaSetEntry = null;
-        for(OldEarleySigmaSetEntry possible : currentSigmaSet) {
-            if(possible.equals(acceptingSigmaSetEntry)) {
-                currentSigmaSetEntry = possible;
-                break;
-            }
-        }
-        Stack<OldEarleySigmaSetEntry> callStack = new Stack<>();
+        EarleySigmaSet currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
+        EarleySigmaSetEntry currentSigmaSetEntry = currentSigmaSet.get(acceptingSigmaSetEntry);
+        Stack<EarleySigmaSetEntry> callStack = new Stack<>();
 
         while(! currentSigmaSetEntry.equals(startRuleEntry)) {
-            int cursorIndex = currentSigmaSetEntry.getCursorIndex();
-            if(cursorIndex > 0) {
-                // we can keep working backwards through the current rule
-                // look at what the grammar element is immediately before the cursor
-                GrammarElement previousElement = currentSigmaSetEntry.getGrammarRule().getRightHandSide().get(cursorIndex - 1);
-                if(previousElement.isNonterminal()) {
-                    // Reverse the end/exit rule
-                    // This means I need to look in my current sigma set for an entry where this nonterminal is finished.
-                    // That is, an entry where the left hand side of the grammar rule is this nonterminal, and its cursor is
-                    // at the end of the right hand side
-                    // We call this "lowerSigmaSetEntry" because it's the entry that takes us lower in the parse tree
-                    OldEarleySigmaSetEntry lowerSigmaSetEntry = null;
-                    for(OldEarleySigmaSetEntry possible : currentSigmaSet) {
-                        // First, the nonterminal on the left side of the grammar rule must be the same as the element we're trying to match
-                        if(! possible.getGrammarRule().getLeftHandSide().equals(previousElement)) {
-                            continue;
-                        }
-                        // Second, it must have its cursor all the way at the end of the right hand side
-                        if(possible.getCursorIndex() < possible.getGrammarRule().getRightHandSide().size()) {
-                            continue;
-                        }
-                        // Third, we must look in the sigma set represented by its tag, and there must be an entry identical
-                        // to our current one, except the cursor is to the left of the nonterminal in question, not to the right of it
-                        int possibleTag = possible.getTag();
-                        HashSet<OldEarleySigmaSetEntry> possibleTagSigmaSet = sigmaSets.get(possibleTag);
-                        OldEarleySigmaSetEntry necessarySigmaSetEntry = new OldEarleySigmaSetEntry(currentSigmaSetEntry.getGrammarRule(), currentSigmaSetEntry.getCursorIndex() - 1, currentSigmaSetEntry.getTag());
-                        if(! possibleTagSigmaSet.contains(necessarySigmaSetEntry)) {
-                            continue;
-                        }
-                        // this is the right entry
-                        // for an ambiguous string, there might be multiple entries in this set that fit this criterion. this
-                        // is where we would look for those
-                        lowerSigmaSetEntry = possible;
-                        break;
-                    }
-                    EarleyParseTreeParent previousElementParent = new EarleyParseTreeParent(currentParseTreeParent, lowerSigmaSetEntry.getGrammarRule());
-                    currentParseTreeParent.getChildren().add(0, previousElementParent);
-                    currentParseTreeParent = previousElementParent;
-                    callStack.push(currentSigmaSetEntry);
-                    currentSigmaSetEntry = lowerSigmaSetEntry;
-                } else {
-                    // Reverse the scan rule
+            // System.out.println("Starting to process: " + currentSigmaSetEntry);
+            CursorGrammarRule currentCursorRule = currentSigmaSetEntry.getCursorGrammarRule();
+            if(currentCursorRule.isCursorAtStart()) {
+                // Reverse the Call & Start step
+                // We're done adding children to the current parent. But
+                // since we've been working backward through them, we've
+                // added them in reverse order. So we fix that now
+                Collections.reverse(currentParseTreeParent.getChildren());
+                // Now go up one level in the parse tree
+                currentParseTreeParent = currentParseTreeParent.getParent();
+                // Update the current entry
+                currentSigmaSetEntry = callStack.pop();
+            } else {
+                GrammarElement previousElement = currentCursorRule.getPreviousGrammarElement();
+                if(previousElement instanceof Terminal) {
+                    // Reverse the Scan step
                     Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                    EarleyParseTreeLeaf terminalNode = new EarleyParseTreeLeaf(currentParseTreeParent, scannedToken);
-                    currentParseTreeParent.getChildren().add(0, terminalNode);
-                    // Find the previous sigma set entry
+                    ParseTreeLeaf scanLeaf = new ParseTreeLeaf(currentParseTreeParent, scannedToken);
+                    currentParseTreeParent.getChildren().add(scanLeaf);
                     currentSigmaSetIndex--;
                     currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-                    for(OldEarleySigmaSetEntry possible : currentSigmaSet) {
-                        if(possible.getGrammarRule().equals(currentSigmaSetEntry.getGrammarRule()) &&
-                                possible.getTag() == currentSigmaSetEntry.getTag() &&
-                                possible.getCursorIndex() == currentSigmaSetEntry.getCursorIndex() - 1) {
-                            currentSigmaSetEntry = possible;
-                            break;
-                        }
-                    }
+                    currentSigmaSetEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
+                } else {
+                    // Reverse the Exit & End step
+                    // Find the EarleySigmaSetEntry that started the
+                    // call that is currently ending
+                    EarleySigmaSetEntry precedingEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
+                    int endingTag = precedingEntry.getTag();
+                    EarleySigmaSet callingSigmaSet = sigmaSets.get(endingTag);
+                    CursorGrammarRule previousCursorRule = currentSigmaSetEntry.getCursorGrammarRule().createPrevious();
+                    EarleySigmaSetEntry callingEntryCopy = new EarleySigmaSetEntry(previousCursorRule, currentSigmaSetEntry.getTag());
+                    EarleySigmaSetEntry callingEntry = callingSigmaSet.get(callingEntryCopy);
+                    callStack.push(callingEntry);
+                    // Now we need to add a new parent to the parse
+                    // tree, and then make it the current parent
+                    Nonterminal endingNonterminal = (Nonterminal) previousElement;
+                    ParseTreeParent endingParent = new ParseTreeParent(currentParseTreeParent, endingNonterminal);
+                    currentParseTreeParent.getChildren().add(endingParent);
+                    currentParseTreeParent = endingParent;
+                    currentSigmaSetEntry = precedingEntry;
                 }
-            } else {
-                // Reverse the call/start rule
-                // This is actually quite simple; I go up one parent in the parse tree, and I pop an entry off
-                // the stack and decrement its cursor index by 1
-                currentParseTreeParent = currentParseTreeParent.getParent();
-                OldEarleySigmaSetEntry poppedEntry = callStack.pop();
-                currentSigmaSetEntry = new OldEarleySigmaSetEntry(poppedEntry.getGrammarRule(), poppedEntry.getCursorIndex() - 1, poppedEntry.getTag());
             }
         }
 
         return currentParseTreeParent;
-        */
     }
 
     private void fillSigmaSet(ArrayList<EarleySigmaSet> sigmaSets,

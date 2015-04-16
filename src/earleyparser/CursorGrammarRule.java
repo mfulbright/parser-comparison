@@ -23,6 +23,10 @@ public class CursorGrammarRule {
         return new CursorGrammarRule(grammarRule, cursorIndex + 1);
     }
 
+    public CursorGrammarRule createPrevious() {
+        return new CursorGrammarRule(grammarRule, cursorIndex - 1);
+    }
+
     public GrammarRule getGrammarRule() {
         return grammarRule;
     }

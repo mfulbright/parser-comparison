@@ -100,7 +100,7 @@ public class ParserRunner {
                 System.out.println("That line is not in the language");
             } else {
                 System.out.println("That line is in the language");
-                // printParseTree(parsingResult);
+                printParseTree(parsingResult);
             }
         }
     }
