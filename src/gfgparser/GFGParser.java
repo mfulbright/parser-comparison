@@ -12,8 +12,6 @@ public class GFGParser implements Parser {
     // This is used during the parsing phase, when we're working backwards
     // through the GFG path using the call stack
     private HashMap<InnerGFGNode, InnerGFGNode> returnNodesToCallNodes;
-    private HashMap<Nonterminal, OldStartEndGFGNode> oldStartNodes;
-    private HashMap<Nonterminal, OldStartEndGFGNode> oldEndNodes;
 
     public GFGParser(Grammar g) {
         setGrammar(g);

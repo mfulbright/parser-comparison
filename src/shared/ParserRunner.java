@@ -136,21 +136,6 @@ public class ParserRunner {
         return new GrammarRule(lhsNonterminal, ruleRightHandSide);
     }
 
-    public static void printParseTree(EarleyParseTreeNode root) {
-        printParseTreeHelper("", root);
-    }
-
-    public static void printParseTreeHelper(String prefix, EarleyParseTreeNode root) {
-        System.out.print(prefix);
-        System.out.println(root);
-        if(! root.isLeafNode()) {
-            EarleyParseTreeParent parent = (EarleyParseTreeParent) root;
-            for(EarleyParseTreeNode child : parent.getChildren()) {
-                printParseTreeHelper(prefix + " ", child);
-            }
-        }
-    }
-
     public static void printParseTree(ParseTreeNode root) {
         printParseTreeHelper("", root);
     }
