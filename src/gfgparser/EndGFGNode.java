@@ -8,14 +8,10 @@ public class EndGFGNode implements GFGNode {
 
     private Nonterminal nonterminal;
     private HashMap<InnerGFGNode, InnerGFGNode> callNodesToReturnNodes;
-    // This is used during the parsing phase, when we're working backwards
-    // through the GFG path using the call stack
-    private HashMap<InnerGFGNode, InnerGFGNode> returnNodesToCallNodes;
 
     public EndGFGNode(Nonterminal n) {
         nonterminal = n;
         callNodesToReturnNodes = new HashMap<>();
-        returnNodesToCallNodes = new HashMap<>();
     }
 
     public Nonterminal getNonterminal() {
@@ -24,11 +20,6 @@ public class EndGFGNode implements GFGNode {
 
     public void mapNodes(InnerGFGNode callNode, InnerGFGNode returnNode) {
         callNodesToReturnNodes.put(callNode, returnNode);
-        returnNodesToCallNodes.put(returnNode, callNode);
-    }
-
-    public InnerGFGNode getCallNode(InnerGFGNode returnNode) {
-        return returnNodesToCallNodes.get(returnNode);
     }
 
     public InnerGFGNode getReturnNode(InnerGFGNode callNode) {

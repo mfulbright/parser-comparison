@@ -59,7 +59,8 @@ public class ParserRunner {
         }
         Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
 
-        Parser parser = new GFGParser(grammar);
+        // Parser parser = new GFGParser(grammar);
+        GFGParser parser = new GFGParser(grammar);
 
         Scanner input = new Scanner(System.in);
         InputLoop:
@@ -94,14 +95,13 @@ public class ParserRunner {
                 continue;
             }
 
-            EarleyParseTreeNode parsingResult = parser.parse(tokens);
+            ParseTreeNode parsingResult = parser.parse(tokens);
 
             if(parsingResult == null) {
                 System.out.println("That line is not in the language");
             } else {
                 System.out.println("That line is in the language");
-                // Just a recognizer for now
-                // printParseTree(parsingResult);
+                printParseTree(parsingResult);
             }
         }
     }
@@ -147,6 +147,21 @@ public class ParserRunner {
         if(! root.isLeafNode()) {
             EarleyParseTreeParent parent = (EarleyParseTreeParent) root;
             for(EarleyParseTreeNode child : parent.getChildren()) {
+                printParseTreeHelper(prefix + " ", child);
+            }
+        }
+    }
+
+    public static void printParseTree(ParseTreeNode root) {
+        printParseTreeHelper("", root);
+    }
+
+    public static void printParseTreeHelper(String prefix, ParseTreeNode root) {
+        System.out.print(prefix);
+        System.out.println(root);
+        if(root instanceof ParseTreeParent) {
+            ParseTreeParent parent = (ParseTreeParent) root;
+            for(ParseTreeNode child : parent.getChildren()) {
                 printParseTreeHelper(prefix + " ", child);
             }
         }
