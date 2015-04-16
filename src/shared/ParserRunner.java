@@ -64,7 +64,7 @@ public class ParserRunner {
         Scanner input = new Scanner(System.in);
         InputLoop:
         while(true) {
-            System.out.println("Enter a line of text to recognize:");
+            System.out.println("Enter a line of text to parse:");
 
             String inputLine = input.nextLine();
             if(inputLine.equals("END")) {
@@ -99,7 +99,6 @@ public class ParserRunner {
             if(parsingResult == null) {
                 System.out.println("That line is not in the language");
             } else {
-                System.out.println("That line is in the language");
                 printParseTree(parsingResult);
             }
         }
