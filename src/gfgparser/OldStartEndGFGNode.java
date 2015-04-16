@@ -1,5 +1,6 @@
 package gfgparser;
 
+import earleyparser.CursorGrammarRule;
 import shared.Nonterminal;
 
 import java.util.HashMap;

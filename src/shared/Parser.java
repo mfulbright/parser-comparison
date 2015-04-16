@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface Parser {
     public void setGrammar(Grammar grammar);
-    public EarleyParseTreeNode parse(List<Token> tokens);
+    public ParseTreeNode parse(List<Token> tokens);
 }

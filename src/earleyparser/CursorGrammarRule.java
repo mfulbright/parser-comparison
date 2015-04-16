@@ -1,4 +1,4 @@
-package gfgparser;
+package earleyparser;
 
 import shared.GrammarElement;
 import shared.GrammarRule;
@@ -19,6 +19,10 @@ public class CursorGrammarRule {
         cursorIndex = index;
     }
 
+    public CursorGrammarRule createNext() {
+        return new CursorGrammarRule(grammarRule, cursorIndex + 1);
+    }
+
     public GrammarRule getGrammarRule() {
         return grammarRule;
     }
@@ -27,30 +31,26 @@ public class CursorGrammarRule {
         return cursorIndex;
     }
 
-    public boolean cursorAtStart() {
+    public boolean isCursorAtStart() {
         return cursorIndex == 0;
     }
 
-    public boolean cursorAtEnd() {
+    public boolean isCursorAtEnd() {
         return cursorIndex == grammarRule.getRightHandSide().size();
     }
 
     public GrammarElement getNextGrammarElement() {
-        if(cursorIndex == grammarRule.getRightHandSide().size()) {
+        if(isCursorAtEnd()) {
             return null;
         }
         return grammarRule.getRightHandSide().get(cursorIndex);
     }
 
     public GrammarElement getPreviousGrammarElement() {
-        if(cursorIndex == 0) {
+        if(isCursorAtStart()) {
             return null;
         }
         return grammarRule.getRightHandSide().get(cursorIndex - 1);
-    }
-
-    public CursorGrammarRule createNext() {
-        return new CursorGrammarRule(grammarRule, cursorIndex + 1);
     }
 
     @Override

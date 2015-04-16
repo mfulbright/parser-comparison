@@ -1,34 +1,42 @@
 package earleyparser;
 
-import shared.GrammarElement;
-import shared.GrammarRule;
-
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class EarleySigmaSetEntry {
 
-    private GrammarRule rule;
-    // this will be in the range [0, rule.getRightHandSide().size()]
-    private int cursorIndex;
+    private CursorGrammarRule cursorGrammarRule;
     private int tag;
+    private ArrayList<EarleySigmaSetEntry> precedingEntries;
 
-    public EarleySigmaSetEntry(GrammarRule r, int cI, int t) {
-        rule = r;
-        cursorIndex = cI;
+    public EarleySigmaSetEntry(CursorGrammarRule r, int t) {
+        cursorGrammarRule = r;
         tag = t;
+        precedingEntries = new ArrayList<>();
     }
 
-    public GrammarRule getGrammarRule() {
-        return rule;
+    public EarleySigmaSetEntry(CursorGrammarRule r, int t, EarleySigmaSetEntry e) {
+        cursorGrammarRule = r;
+        tag = t;
+        precedingEntries = new ArrayList<>();
+        precedingEntries.add(e);
     }
 
-    public int getCursorIndex() {
-        return cursorIndex;
+    public CursorGrammarRule getCursorGrammarRule() {
+        return cursorGrammarRule;
     }
 
     public int getTag() {
         return tag;
+    }
+
+    public void addPrecedingEntry(EarleySigmaSetEntry precedingEntry) {
+        precedingEntries.add(precedingEntry);
+    }
+
+    public List<EarleySigmaSetEntry> getPrecedingEntries() {
+        return precedingEntries;
     }
 
     @Override
@@ -36,30 +44,18 @@ public class EarleySigmaSetEntry {
         if(! (other instanceof EarleySigmaSetEntry)) {
             return false;
         }
-        EarleySigmaSetEntry otherSigmaSetEntry = (EarleySigmaSetEntry) other;
-        return rule.equals(otherSigmaSetEntry.rule) &&
-                cursorIndex == otherSigmaSetEntry.cursorIndex &&
-                tag == otherSigmaSetEntry.tag;
+        EarleySigmaSetEntry otherEntry = (EarleySigmaSetEntry) other;
+        return otherEntry.cursorGrammarRule.equals(cursorGrammarRule) &&
+                otherEntry.tag == tag;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(rule, cursorIndex, tag);
+        return Objects.hash(cursorGrammarRule, tag);
     }
 
     @Override
     public String toString() {
-        String rhs = "";
-        ArrayList<GrammarElement> ruleRHS = rule.getRightHandSide();
-        for(int i = 0; i < cursorIndex; i++) {
-            rhs += ruleRHS.get(i) + " ";
-        }
-        rhs += ". ";
-        for(int i = cursorIndex; i < ruleRHS.size(); i++) {
-            rhs += ruleRHS.get(i) + " ";
-        }
-        rhs = rhs.substring(0, rhs.length() - 1);
-
-        return "<" + rule.getLeftHandSide() + " -> " + rhs + ", " + tag + ">";
+       return "<" + cursorGrammarRule + ", " + tag + ">";
     }
 }

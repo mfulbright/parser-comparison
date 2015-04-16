@@ -2,7 +2,10 @@ package earleyparser;
 
 import shared.*;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 public class EarleyParser implements Parser{
 
@@ -18,61 +21,61 @@ public class EarleyParser implements Parser{
     }
 
     @Override
-    public EarleyParseTreeNode parse(List<Token> tokens) {
-        // keep a list of sigma sets. In this list, index j will correspond to
-        // the sigma set right before the jth token.
-        ArrayList<HashSet<EarleySigmaSetEntry>> sigmaSets = new ArrayList<>();
+    public ParseTreeNode parse(List<Token> tokens) {
+        // Keep a list of sigma sets. In this list, index j will correspond to
+        // the sigma set right before the jth token
+        ArrayList<EarleySigmaSet> sigmaSets = new ArrayList<>();
 
-        // set up the first sigma set
-        HashSet<EarleySigmaSetEntry> sigmaSet0 = new HashSet<>();
+        // Set up the first sigma set
+        EarleySigmaSet sigmaSet0 = new EarleySigmaSet();
         sigmaSets.add(sigmaSet0);
         ArrayDeque<EarleySigmaSetEntry> sigmaSet0ToProcess = new ArrayDeque<>();
         GrammarRule startRule = grammar.getStartRule();
-        EarleySigmaSetEntry startRuleEntry = new EarleySigmaSetEntry(startRule, 0, 0);
+        CursorGrammarRule startCursorRule = new CursorGrammarRule(startRule, 0);
+        EarleySigmaSetEntry startRuleEntry = new EarleySigmaSetEntry(startCursorRule, 0);
         sigmaSet0ToProcess.add(startRuleEntry);
         fillSigmaSet(sigmaSets, 0, sigmaSet0ToProcess);
 
-        // process the input
+        // Process the input
         for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++) {
             Token currentToken = tokens.get(tokenIndex);
-            HashSet<EarleySigmaSetEntry> previousSigmaSet = sigmaSets.get(tokenIndex);
-            HashSet<EarleySigmaSetEntry> nextSigmaSet = new HashSet<>();
+            EarleySigmaSet previousSigmaSet = sigmaSets.get(tokenIndex);
+            EarleySigmaSet nextSigmaSet = new EarleySigmaSet();
             sigmaSets.add(nextSigmaSet);
             ArrayDeque<EarleySigmaSetEntry> toProcess = new ArrayDeque<>();
-
-            for(EarleySigmaSetEntry previousEntry : previousSigmaSet) {
-                GrammarRule previousGrammarRule = previousEntry.getGrammarRule();
-                ArrayList<GrammarElement> previousRHS = previousGrammarRule.getRightHandSide();
-                int previousCursor = previousEntry.getCursorIndex();
-                if(previousCursor < previousRHS.size() && ! previousRHS.get(previousCursor).isNonterminal()) {
-                    Terminal terminalAfterCursor = (Terminal) previousRHS.get(previousCursor);
-                    if(terminalAfterCursor.getSymbol() == currentToken.getType()) {
-                        EarleySigmaSetEntry scanEntry = new EarleySigmaSetEntry(previousGrammarRule, previousCursor + 1, previousEntry.getTag());
-                        toProcess.add(scanEntry);
-                    }
-                }
+            Set<EarleySigmaSetEntry> scanableEntries = previousSigmaSet.getEntriesPrecedingSymbol(currentToken.getType());
+            for(EarleySigmaSetEntry scanableEntry : scanableEntries) {
+                EarleySigmaSetEntry newEntry = new EarleySigmaSetEntry(
+                        scanableEntry.getCursorGrammarRule().createNext(),
+                        scanableEntry.getTag(),
+                        scanableEntry);
+                toProcess.add(newEntry);
             }
 
             fillSigmaSet(sigmaSets, tokenIndex + 1, toProcess);
         }
 
-        EarleySigmaSetEntry acceptingSigmaSetEntry = new EarleySigmaSetEntry(startRule, startRule.getRightHandSide().size(), 0);
+        CursorGrammarRule acceptingCursorRule = new CursorGrammarRule(startRule, startRule.getRightHandSide().size());
+        EarleySigmaSetEntry acceptingSigmaSetEntry = new EarleySigmaSetEntry(acceptingCursorRule, 0);
         if (! sigmaSets.get(tokens.size()).contains(acceptingSigmaSetEntry)) {
             return null;
+        } else {
+            return new ParseTreeParent(null, null);
         }
+        /*
 
         // The recognizing was successful - rebuild the parse tree
         EarleyParseTreeParent currentParseTreeParent = new EarleyParseTreeParent(null, startRule);
         int currentSigmaSetIndex = tokens.size();
-        HashSet<EarleySigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-        EarleySigmaSetEntry currentSigmaSetEntry = null;
-        for(EarleySigmaSetEntry possible : currentSigmaSet) {
+        HashSet<OldEarleySigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
+        OldEarleySigmaSetEntry currentSigmaSetEntry = null;
+        for(OldEarleySigmaSetEntry possible : currentSigmaSet) {
             if(possible.equals(acceptingSigmaSetEntry)) {
                 currentSigmaSetEntry = possible;
                 break;
             }
         }
-        Stack<EarleySigmaSetEntry> callStack = new Stack<>();
+        Stack<OldEarleySigmaSetEntry> callStack = new Stack<>();
 
         while(! currentSigmaSetEntry.equals(startRuleEntry)) {
             int cursorIndex = currentSigmaSetEntry.getCursorIndex();
@@ -86,8 +89,8 @@ public class EarleyParser implements Parser{
                     // That is, an entry where the left hand side of the grammar rule is this nonterminal, and its cursor is
                     // at the end of the right hand side
                     // We call this "lowerSigmaSetEntry" because it's the entry that takes us lower in the parse tree
-                    EarleySigmaSetEntry lowerSigmaSetEntry = null;
-                    for(EarleySigmaSetEntry possible : currentSigmaSet) {
+                    OldEarleySigmaSetEntry lowerSigmaSetEntry = null;
+                    for(OldEarleySigmaSetEntry possible : currentSigmaSet) {
                         // First, the nonterminal on the left side of the grammar rule must be the same as the element we're trying to match
                         if(! possible.getGrammarRule().getLeftHandSide().equals(previousElement)) {
                             continue;
@@ -99,8 +102,8 @@ public class EarleyParser implements Parser{
                         // Third, we must look in the sigma set represented by its tag, and there must be an entry identical
                         // to our current one, except the cursor is to the left of the nonterminal in question, not to the right of it
                         int possibleTag = possible.getTag();
-                        HashSet<EarleySigmaSetEntry> possibleTagSigmaSet = sigmaSets.get(possibleTag);
-                        EarleySigmaSetEntry necessarySigmaSetEntry = new EarleySigmaSetEntry(currentSigmaSetEntry.getGrammarRule(), currentSigmaSetEntry.getCursorIndex() - 1, currentSigmaSetEntry.getTag());
+                        HashSet<OldEarleySigmaSetEntry> possibleTagSigmaSet = sigmaSets.get(possibleTag);
+                        OldEarleySigmaSetEntry necessarySigmaSetEntry = new OldEarleySigmaSetEntry(currentSigmaSetEntry.getGrammarRule(), currentSigmaSetEntry.getCursorIndex() - 1, currentSigmaSetEntry.getTag());
                         if(! possibleTagSigmaSet.contains(necessarySigmaSetEntry)) {
                             continue;
                         }
@@ -123,7 +126,7 @@ public class EarleyParser implements Parser{
                     // Find the previous sigma set entry
                     currentSigmaSetIndex--;
                     currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-                    for(EarleySigmaSetEntry possible : currentSigmaSet) {
+                    for(OldEarleySigmaSetEntry possible : currentSigmaSet) {
                         if(possible.getGrammarRule().equals(currentSigmaSetEntry.getGrammarRule()) &&
                                 possible.getTag() == currentSigmaSetEntry.getTag() &&
                                 possible.getCursorIndex() == currentSigmaSetEntry.getCursorIndex() - 1) {
@@ -137,56 +140,56 @@ public class EarleyParser implements Parser{
                 // This is actually quite simple; I go up one parent in the parse tree, and I pop an entry off
                 // the stack and decrement its cursor index by 1
                 currentParseTreeParent = currentParseTreeParent.getParent();
-                EarleySigmaSetEntry poppedEntry = callStack.pop();
-                currentSigmaSetEntry = new EarleySigmaSetEntry(poppedEntry.getGrammarRule(), poppedEntry.getCursorIndex() - 1, poppedEntry.getTag());
+                OldEarleySigmaSetEntry poppedEntry = callStack.pop();
+                currentSigmaSetEntry = new OldEarleySigmaSetEntry(poppedEntry.getGrammarRule(), poppedEntry.getCursorIndex() - 1, poppedEntry.getTag());
             }
         }
 
         return currentParseTreeParent;
+        */
     }
 
-    private void fillSigmaSet(ArrayList<HashSet<EarleySigmaSetEntry>> sigmaSets, int currentSigmaSetIndex, ArrayDeque<EarleySigmaSetEntry> toProcess) {
-        HashSet<EarleySigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
+    private void fillSigmaSet(ArrayList<EarleySigmaSet> sigmaSets,
+                              int currentSigmaSetIndex,
+                              ArrayDeque<EarleySigmaSetEntry> toProcess) {
+        EarleySigmaSet currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
         while(! toProcess.isEmpty()) {
             EarleySigmaSetEntry processing = toProcess.remove();
-            if(currentSigmaSet.contains(processing)) {
+            if (currentSigmaSet.contains(processing)) {
+                // I think this might be wrong for parse forests
                 continue;
             }
             currentSigmaSet.add(processing);
 
-            GrammarRule entryGrammarRule = processing.getGrammarRule();
-            ArrayList<GrammarElement> entryRHS = entryGrammarRule.getRightHandSide();
-            int entryCursor = processing.getCursorIndex();
-            if(entryCursor < entryRHS.size()) {
-                GrammarElement elementAfterCursor = entryRHS.get(entryCursor);
-                if(elementAfterCursor.isNonterminal()) {
-                    // This is the Call and Start step (I've basically combined them in this implementation)
-                    Nonterminal nonterminalAfterCursor = (Nonterminal) elementAfterCursor;
-                    List<GrammarRule> callableGrammarRules = grammar.getRulesWithLeftHandSide(nonterminalAfterCursor);
-                    for(GrammarRule callableGrammarRule : callableGrammarRules) {
-                        EarleySigmaSetEntry callEntry = new EarleySigmaSetEntry(callableGrammarRule, 0, currentSigmaSetIndex);
-                        toProcess.add(callEntry);
-                    }
-                } else {
-                    // This is where the scan step would be. We're done flooding at this point, so just ignore this
+            CursorGrammarRule processingCursorRule = processing.getCursorGrammarRule();
+            if(processingCursorRule.isCursorAtEnd()) {
+                // This is the Exit & End step
+                // Look for calling entries in the appropriate sigma set
+                Nonterminal endingNonterminal = processingCursorRule.getGrammarRule().getLeftHandSide();
+                int endingTag = processing.getTag();
+                EarleySigmaSet callingSigmaSet = sigmaSets.get(endingTag);
+                Set<EarleySigmaSetEntry> callingEntries = callingSigmaSet.getEntriesPrecedingNonterminal(endingNonterminal);
+                for(EarleySigmaSetEntry callingEntry : callingEntries) {
+                    CursorGrammarRule callingCursorRule = callingEntry.getCursorGrammarRule();
+                    CursorGrammarRule nextCursorRule = callingCursorRule.createNext();
+                    int callingEntryTag = callingEntry.getTag();
+                    EarleySigmaSetEntry newEntry = new EarleySigmaSetEntry(nextCursorRule, callingEntryTag, processing);
+                    toProcess.add(newEntry);
                 }
             } else {
-                // This is the Exit and End step (I've basically combined them in this implementation)
-                Nonterminal endingNonterminal = entryGrammarRule.getLeftHandSide();
-                int endingTag = processing.getTag();
-                HashSet<EarleySigmaSetEntry> previousSigmaSet = sigmaSets.get(endingTag);
-                for(EarleySigmaSetEntry possibleEndingEntry : previousSigmaSet) {
-                    GrammarRule possibleEndingGrammarRule = possibleEndingEntry.getGrammarRule();
-                    ArrayList<GrammarElement> possibleEndingRHS = possibleEndingGrammarRule.getRightHandSide();
-                    int possibleEndingCursorIndex = possibleEndingEntry.getCursorIndex();
-                    if(possibleEndingCursorIndex < possibleEndingRHS.size() &&
-                            possibleEndingRHS.get(possibleEndingCursorIndex).isNonterminal()) {
-                        Nonterminal possibleEndingNonterminal = (Nonterminal) possibleEndingRHS.get(possibleEndingCursorIndex);
-                        if(possibleEndingNonterminal.equals(endingNonterminal)) {
-                            EarleySigmaSetEntry newEndingEntry = new EarleySigmaSetEntry(possibleEndingGrammarRule, possibleEndingCursorIndex + 1, possibleEndingEntry.getTag());
-                            toProcess.add(newEndingEntry);
-                        }
+                GrammarElement nextElement = processingCursorRule.getNextGrammarElement();
+                if(nextElement instanceof Nonterminal) {
+                    // This is the Call & Start step
+                    Nonterminal nextNonterminal = (Nonterminal) nextElement;
+                    List<GrammarRule> nextNonterminalRules = grammar.getRulesWithLeftHandSide(nextNonterminal);
+                    for(GrammarRule rule : nextNonterminalRules) {
+                        CursorGrammarRule cursorRule = new CursorGrammarRule(rule, 0);
+                        EarleySigmaSetEntry newEntry = new EarleySigmaSetEntry(cursorRule, currentSigmaSetIndex, processing);
+                        toProcess.add(newEntry);
                     }
+                } else {
+                    // This is the Scan step
+                    // We don't scan in this method, so nothing happens here
                 }
             }
         }

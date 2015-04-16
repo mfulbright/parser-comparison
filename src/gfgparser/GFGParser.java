@@ -4,9 +4,7 @@ import shared.*;
 
 import java.util.*;
 
-public class GFGParser
-        // implements Parser
-{
+public class GFGParser implements Parser {
 
     private Grammar grammar;
     private HashMap<Nonterminal, StartGFGNode> startNodes;
@@ -51,12 +49,12 @@ public class GFGParser
                     // Go ahead and create the next GFG node
                     InnerGFGNode nextNode = new InnerGFGNode();
                     GrammarElement currentElement = ruleRHS.get(currentIndex);
-                    if(! currentElement.isNonterminal()) {
+                    if(currentElement instanceof Terminal) {
                         // This is a typical transition edge
                         Terminal currentTerminal = (Terminal) currentElement;
                         previousNode.setTransition(currentTerminal);
                         previousNode.setNextNode(nextNode);
-                    } else {
+                    } else { // currentElement instanceof Nonterminal
                         // previousNode is a call node, and nextNode is a return node
                         Nonterminal currentNonterminal = (Nonterminal) currentElement;
                         // Leave previousNode's transition null, to represent an epsilon transition
@@ -186,158 +184,6 @@ public class GFGParser
         }
 
         return currentParseTreeParent;
-
-        /*
-        // The recognizing was successful - rebuild the parse tree
-        EarleyParseTreeParent currentParseTreeParent = new EarleyParseTreeParent(null, startRule);
-        int currentSigmaSetIndex = tokens.size();
-        HashSet<OldGFGSigmaSetEntry> currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-        OldGFGSigmaSetEntry currentSigmaSetEntry = acceptingEntry;
-        Stack<OldGFGSigmaSetEntry> callStack = new Stack<>();
-
-        while(! currentSigmaSetEntry.equals(startRuleEntry)) {
-            OldGFGNode currentOldGFGNode = currentSigmaSetEntry.getGFGNode();
-            if(currentOldGFGNode.isStartEndGFGNode()) {
-                OldStartEndGFGNode currentStartEndNode = (OldStartEndGFGNode) currentOldGFGNode;
-                if(currentStartEndNode.isStartNode()) {
-                    // Reverse the Call step
-                    currentParseTreeParent = currentParseTreeParent.getParent();
-                    OldGFGSigmaSetEntry finishedSigmaSetEntry = callStack.pop();
-                    CursorGrammarRule finishedCursorRule = ((OldRuleGFGNode) finishedSigmaSetEntry.getGFGNode()).getCursorGrammarRule();
-                    for(OldGFGSigmaSetEntry possibleEntry : currentSigmaSet) {
-                        if(possibleEntry.getTag() != finishedSigmaSetEntry.getTag()) {
-                            continue;
-                        }
-                        OldGFGNode possibleNode = possibleEntry.getGFGNode();
-                        if(possibleNode.isStartEndGFGNode()) {
-                            continue;
-                        }
-                        OldRuleGFGNode possibleRuleNode = (OldRuleGFGNode) possibleNode;
-                        if(possibleRuleNode.getCursorGrammarRule().createNext().equals(finishedCursorRule)) {
-                            currentSigmaSetEntry = possibleEntry;
-                            break;
-                        }
-                    }
-                } else {
-                    // Reverse the Exit step
-                    // Just search through this sigma set for rules with this nonterminal
-                    // that are finished
-                    OldGFGSigmaSetEntry exitingEntry = null;
-                    for(OldGFGSigmaSetEntry possibleEntry : currentSigmaSet) {
-                        if(possibleEntry.getTag() != currentSigmaSetEntry.getTag()) {
-                            continue;
-                        }
-                        OldGFGNode possibleNode = possibleEntry.getGFGNode();
-                        if(possibleNode.isStartEndGFGNode()) {
-                            continue;
-                        }
-                        OldRuleGFGNode possibleRuleNode = (OldRuleGFGNode) possibleNode;
-                        if(possibleRuleNode.getNextNode().equals(currentStartEndNode)) {
-                            // This is a match. There may be other matches, if the string is ambiguous
-                            exitingEntry = possibleEntry;
-                            break;
-                        }
-                    }
-                    OldRuleGFGNode exitingRuleNode = (OldRuleGFGNode) exitingEntry.getGFGNode();
-                    GrammarRule exitingGrammarRule = exitingRuleNode.getCursorGrammarRule().getGrammarRule();
-                    EarleyParseTreeParent exitingElementParent = new EarleyParseTreeParent(currentParseTreeParent, exitingGrammarRule);
-                    currentParseTreeParent.getChildren().add(0, exitingElementParent);
-                    currentParseTreeParent = exitingElementParent;
-                    currentSigmaSetEntry = exitingEntry;
-                }
-            } else {
-                OldRuleGFGNode currentRuleNode = (OldRuleGFGNode) currentOldGFGNode;
-                if(currentRuleNode.getCursorGrammarRule().cursorAtStart()) {
-                    // Reverse the Start step
-                    Nonterminal startingNonterminal = currentRuleNode.getCursorGrammarRule().getGrammarRule().getLeftHandSide();
-                    for(OldGFGSigmaSetEntry possibleEntry : currentSigmaSet) {
-                        OldGFGNode possibleNode = possibleEntry.getGFGNode();
-                        if(! possibleNode.isStartEndGFGNode()) {
-                            continue;
-                        }
-                        OldStartEndGFGNode possibleStartEndNode = (OldStartEndGFGNode) possibleNode;
-                        if(! possibleStartEndNode.isStartNode()) {
-                            continue;
-                        }
-                        if(possibleStartEndNode.getNonterminal().equals(startingNonterminal)) {
-                            currentSigmaSetEntry = possibleEntry;
-                            break;
-                        }
-                    }
-                } else {
-                    // Keep working backwards through the current rule
-                    GrammarElement previousElement = currentRuleNode.getCursorGrammarRule().getPreviousGrammarElement();
-                    if(previousElement.isNonterminal()) {
-                        // Reverse the End step
-                        // Look in the current sigma set for the appropriate end node
-                        OldGFGSigmaSetEntry endingEntry = null;
-                        Nonterminal endingNonterminal = (Nonterminal) previousElement;
-                        entry_search_loop:
-                        for(OldGFGSigmaSetEntry possibleEntry : currentSigmaSet) {
-                            if(! possibleEntry.getGFGNode().isStartEndGFGNode()) {
-                                continue;
-                            }
-                            OldStartEndGFGNode possibleEndingNode = (OldStartEndGFGNode) possibleEntry.getGFGNode();
-                            if(possibleEndingNode.isStartNode()) {
-                                continue;
-                            }
-                            if(! possibleEndingNode.getNonterminal().equals(endingNonterminal)) {
-                                continue;
-                            }
-                            // For it to be a match, there must also be the corresponding call node in the right sigma set
-                            int possibleEndingTag = possibleEntry.getTag();
-                            HashSet<OldGFGSigmaSetEntry> possibleEndingSigmaSet = sigmaSets.get(possibleEndingTag);
-                            int currentTag = currentSigmaSetEntry.getTag();
-                            for(OldGFGSigmaSetEntry possibleCallEntry : possibleEndingSigmaSet) {
-                                if(possibleCallEntry.getTag() != currentTag) {
-                                    continue;
-                                }
-                                OldGFGNode possibleCallNode = possibleCallEntry.getGFGNode();
-                                if(possibleCallNode.isStartEndGFGNode()) {
-                                    continue;
-                                }
-                                OldRuleGFGNode possibleCallRuleNode = (OldRuleGFGNode) possibleCallNode;
-                                CursorGrammarRule possibleCallCursorRule = possibleCallRuleNode.getCursorGrammarRule();
-                                CursorGrammarRule endingCursorRule = currentRuleNode.getCursorGrammarRule();
-                                if(possibleCallCursorRule.createNext().equals(endingCursorRule)) {
-                                    // This is a match. We don't need to modify the parse tree at all, so just
-                                    // update the current sigma set entry and proceed to the next main loop iteration
-                                    callStack.push(currentSigmaSetEntry);
-                                    currentSigmaSetEntry = possibleEntry;
-                                    break entry_search_loop;
-                                }
-                            }
-                        }
-                    } else {
-                        // Reverse the Scan step
-                        Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                        EarleyParseTreeLeaf terminalNode = new EarleyParseTreeLeaf(currentParseTreeParent, scannedToken);
-                        currentParseTreeParent.getChildren().add(0, terminalNode);
-                        // Find the previous sigma set entry
-                        HashSet<OldGFGSigmaSetEntry> previousSigmaSet = sigmaSets.get(currentSigmaSetIndex - 1);
-                        for(OldGFGSigmaSetEntry possibleEntry : previousSigmaSet) {
-                            if(possibleEntry.getTag() != currentSigmaSetEntry.getTag()) {
-                                continue;
-                            }
-                            OldGFGNode possibleNode = possibleEntry.getGFGNode();
-                            if(possibleNode.isStartEndGFGNode()) {
-                                continue;
-                            }
-                            OldRuleGFGNode possibleRuleNode = (OldRuleGFGNode) possibleNode;
-                            if(possibleRuleNode.getNextNode().equals(currentOldGFGNode)) {
-                                currentSigmaSetEntry = possibleEntry;
-                                currentSigmaSetIndex--;
-                                currentSigmaSet = previousSigmaSet;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return currentParseTreeParent;
-        */
     }
 
     private void fillSigmaSet(ArrayList<GFGSigmaSet> sigmaSets,
@@ -353,6 +199,9 @@ public class GFGParser
                 // we need to not just drop this entry but map it to
                 // the entry already in the set. Maybe. Or something
                 // like that.
+                // I'm definitely not doing it right for parse forests right
+                // now, because I never even consider adding to an entry's
+                // precedingEntries.
                 continue;
             }
             currentSigmaSet.add(processing);

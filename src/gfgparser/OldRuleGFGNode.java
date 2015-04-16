@@ -1,5 +1,7 @@
 package gfgparser;
 
+import earleyparser.CursorGrammarRule;
+
 import java.util.Objects;
 
 public class OldRuleGFGNode implements OldGFGNode {
