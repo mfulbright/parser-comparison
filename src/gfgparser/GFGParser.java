@@ -17,7 +17,7 @@ public class GFGParser implements Parser {
         setGrammar(g);
     }
 
-    // @Override
+    @Override
     public void setGrammar(Grammar g) {
         grammar = g;
         // Build the GFG
@@ -71,7 +71,7 @@ public class GFGParser implements Parser {
         }
     }
 
-    // @Override
+    @Override
     public ParseTreeNode parse(List<Token> tokens) {
         // In this list, index j will correspond to the sigma set right before
         // the jth token
