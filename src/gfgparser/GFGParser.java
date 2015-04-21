@@ -152,8 +152,10 @@ public class GFGParser implements Parser {
                     EndGFGNode endPrecedingNode = (EndGFGNode) precedingNode;
                     Nonterminal endingNonterminal = endPrecedingNode.getNonterminal();
                     ParseTreeParent endingNonterminalTreeNode = new ParseTreeParent(currentParseTreeParent, endingNonterminal);
+                    /*
                     currentParseTreeParent.getChildren().add(endingNonterminalTreeNode);
                     currentParseTreeParent = endingNonterminalTreeNode;
+                    */
                     // Could there be multiple preceding nodes in this case? I
                     // don't know, I'll think about that when I do the parse
                     // forest stuff
@@ -162,7 +164,9 @@ public class GFGParser implements Parser {
                     // Reverse the Scan step
                     Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
                     ParseTreeLeaf scanLeaf = new ParseTreeLeaf(currentParseTreeParent, scannedToken);
+                    /*
                     currentParseTreeParent.getChildren().add(scanLeaf);
+                    */
                     currentSigmaSetIndex--;
                     currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
                     currentSigmaSetEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
@@ -173,7 +177,9 @@ public class GFGParser implements Parser {
                 // parent's nonterminal. However, as we've worked backwards,
                 // we've added the children in reverse order. So we reverse
                 // them now.
+                /*
                 Collections.reverse(currentParseTreeParent.getChildren());
+                */
                 // Now we go up one level in the tree
                 currentParseTreeParent = currentParseTreeParent.getParent();
                 // And pop off the call stack

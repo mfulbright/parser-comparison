@@ -5,6 +5,7 @@ import shared.Nonterminal;
 import shared.Symbol;
 import shared.Terminal;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,6 +34,9 @@ public class EarleySigmaSet {
     }
 
     public void add(EarleySigmaSetEntry entry) {
+        if(contains(entry)) {
+            return;
+        }
         allEntries.put(entry, entry);
         CursorGrammarRule cursorRule = entry.getCursorGrammarRule();
         if(cursorRule.isCursorAtEnd()) {
@@ -47,6 +51,12 @@ public class EarleySigmaSet {
             Nonterminal nextNonterminal = (Nonterminal) nextElement;
             ensurePrecedingNonterminalSet(nextNonterminal);
             entriesPrecedingNonterminal.get(nextNonterminal).add(entry);
+        }
+    }
+
+    public void addAll(Collection<EarleySigmaSetEntry> entries) {
+        for(EarleySigmaSetEntry entry : entries) {
+            add(entry);
         }
     }
 
@@ -82,5 +92,10 @@ public class EarleySigmaSet {
             listForNonterminal = new HashSet<>();
             entriesPrecedingNonterminal.put(nonterminal, listForNonterminal);
         }
+    }
+
+    @Override
+    public String toString() {
+        return allEntries.keySet().toString();
     }
 }

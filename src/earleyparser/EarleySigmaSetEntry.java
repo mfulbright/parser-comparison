@@ -54,8 +54,23 @@ public class EarleySigmaSetEntry {
         return Objects.hash(cursorGrammarRule, tag);
     }
 
+    // Returns just the cursor grammar rule and the tag, NOT the
+    // preceding entries
+    public String entryString() {
+        return "<" + cursorGrammarRule + ", " + tag + ">";
+    }
+
     @Override
     public String toString() {
-       return "<" + cursorGrammarRule + ", " + tag + ">";
+        String precedingEntriesString = "(";
+        if(precedingEntries.size() > 0) {
+            precedingEntriesString += precedingEntries.get(0).entryString();
+        }
+        for(int i = 1; i < precedingEntries.size(); i++) {
+            precedingEntriesString += ", " + precedingEntries.get(i).entryString();
+        }
+        precedingEntriesString += ")";
+
+        return "<" + cursorGrammarRule + ", " + tag + "> - " + precedingEntriesString;
     }
 }

@@ -4,9 +4,7 @@ import earleyparser.EarleyParser;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -139,13 +137,46 @@ public class ParserRunner {
         printParseTreeHelper("", root);
     }
 
-    public static void printParseTreeHelper(String prefix, ParseTreeNode root) {
-        System.out.print(prefix);
-        System.out.println(root);
-        if(root instanceof ParseTreeParent) {
-            ParseTreeParent parent = (ParseTreeParent) root;
-            for(ParseTreeNode child : parent.getChildren()) {
-                printParseTreeHelper(prefix + " ", child);
+    public static void printParseTreeHelper(String prefix, ParseTreeNode node) {
+        if(node instanceof ParseTreeLeaf) {
+            System.out.println(prefix + node);
+        } else {
+            ParseTreeParent parent = (ParseTreeParent) node;
+            Set<List<ParseTreeNode>> childTrees = parent.getChildTrees();
+            if(childTrees.size() == 1) {
+                List<ParseTreeNode> children = childTrees.iterator().next();
+                System.out.print(prefix);
+                System.out.print(parent.getNonterminal());
+                System.out.print(" -> ");
+                for(ParseTreeNode child : children) {
+                    if(child instanceof ParseTreeParent) {
+                        System.out.print(((ParseTreeParent) child).getNonterminal() + " ");
+                    } else {
+                        System.out.print(((ParseTreeLeaf) child).getSymbol() + " ");
+                    }
+                }
+                System.out.println();
+                for(ParseTreeNode child : children) {
+                    printParseTreeHelper(prefix + " ", child);
+                }
+            } else {
+                System.out.print(prefix);
+                System.out.println(parent.getNonterminal());
+                int i = 1;
+                for(List<ParseTreeNode> childTree : childTrees) {
+                    String rhs = "";
+                    for(ParseTreeNode child : childTree) {
+                        if(child instanceof ParseTreeParent) {
+                            rhs += ((ParseTreeParent) child).getNonterminal() + " ";
+                        } else {
+                            rhs += ((ParseTreeLeaf) child).getSymbol() + " ";
+                        }
+                    }
+                    System.out.println(prefix + i++ + ": " + rhs);
+                    for(ParseTreeNode child : childTree) {
+                        printParseTreeHelper(prefix + " ", child);
+                    }
+                }
             }
         }
     }

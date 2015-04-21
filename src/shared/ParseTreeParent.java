@@ -1,18 +1,19 @@
 package shared;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ParseTreeParent implements ParseTreeNode {
 
     private ParseTreeParent parent;
     private Nonterminal nonterminal;
-    private ArrayList<ParseTreeNode> children;
+    private HashSet<List<ParseTreeNode>> childTrees;
 
     public ParseTreeParent(ParseTreeParent p, Nonterminal n) {
         parent = p;
         nonterminal = n;
-        children = new ArrayList<>();
+        childTrees = new HashSet<>();
     }
 
     public ParseTreeParent getParent() {
@@ -23,21 +24,30 @@ public class ParseTreeParent implements ParseTreeNode {
         return nonterminal;
     }
 
-    public List<ParseTreeNode> getChildren() {
-        return children;
+    public void addChildTree(List<ParseTreeNode> childTree) {
+        childTrees.add(childTree);
+    }
+
+    public Set<List<ParseTreeNode>> getChildTrees() {
+        return childTrees;
     }
 
     public String toString() {
-        String rhs = "";
-        for(int i = 0; i < children.size(); i++) {
-            ParseTreeNode child = children.get(i);
-            if(child instanceof ParseTreeParent) {
-                rhs += ((ParseTreeParent) child).getNonterminal() + " ";
-            } else {
-                rhs += ((ParseTreeLeaf) child).getSymbol() + " ";
+        String ret = nonterminal + ": ";
+        int childCount = 1;
+        for(List<ParseTreeNode> childTree : childTrees) {
+            String childString = "";
+            for(int i = 0; i < childTree.size(); i++) {
+                ParseTreeNode child = childTree.get(i);
+                if(child instanceof ParseTreeParent) {
+                    childString += ((ParseTreeParent) child).getNonterminal() + " ";
+                } else {
+                    childString += ((ParseTreeLeaf) child).getSymbol() + " ";
+                }
             }
+            childString = childString.substring(0, childString.length() - 1);
+            ret += childCount++ + " " + childString + "; ";
         }
-        rhs = rhs.substring(0, rhs.length() - 1);
-        return nonterminal + " -> " + rhs;
+        return ret;
     }
 }
