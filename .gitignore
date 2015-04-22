@@ -2,3 +2,7 @@
 /out
 /.idea
 grammarmod.iml
+
+# Ignore vim swap files
+*.swp
+*.swo
