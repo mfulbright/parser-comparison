@@ -113,7 +113,6 @@ public class GFGParser implements Parser {
             return null;
         }
 
-
         // The recognizing was successful - rebuild the parse tree
         return buildParseTree(tokens, sigmaSets);
     }

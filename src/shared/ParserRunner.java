@@ -1,5 +1,6 @@
 package shared;
 
+import earleyparser.EarleyParser;
 import gfgparser.GFGParser;
 
 import java.io.File;
@@ -57,7 +58,8 @@ public class ParserRunner {
         }
         Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
 
-        Parser parser = new GFGParser(grammar);
+        Parser earleyParser = new EarleyParser(grammar);
+        Parser gfgParser = new GFGParser(grammar);
 
         Scanner input = new Scanner(System.in);
         InputLoop:
@@ -92,13 +94,33 @@ public class ParserRunner {
                 continue;
             }
 
-            ParseTreeNode parsingResult = parser.parse(tokens);
+            ParseTreeNode earleyResult = earleyParser.parse(tokens);
+            ParseTreeNode gfgResult = gfgParser.parse(tokens);
+            if( (earleyResult == null && gfgResult == null) ||
+                    earleyResult.equals(gfgResult)) {
+                System.out.println("The parsers returned the same trees");
+            } else {
+                System.out.println("ERROR: The parsers returned different trees");
+                System.out.println("Earley tree:");
+                if(earleyResult == null) {
+                    System.out.println(earleyResult);
+                } else {
+                    printParseTree(earleyResult);
+                }
+                System.out.println();
+                System.out.println("GFG tree:");
+                if(gfgResult == null) {
+                    System.out.println(gfgResult);
+                } else {
+                    printParseTree(gfgResult);
+                }
+                continue;
+            }
 
-            if(parsingResult == null) {
+            if(earleyResult == null) {
                 System.out.println("That line is not in the language");
             } else {
-                // printParseTree(parsingResult);
-                printAllParseTrees(parsingResult);
+                printAllParseTrees(earleyResult);
             }
         }
     }
