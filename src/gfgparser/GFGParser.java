@@ -116,76 +116,6 @@ public class GFGParser implements Parser {
 
         // The recognizing was successful - rebuild the parse tree
         return buildParseTree(tokens, sigmaSets);
-        /*
-        ParseTreeParent currentParseTreeParent = new ParseTreeParent(null, startRule.getLeftHandSide());
-        int currentSigmaSetIndex = tokens.size();
-        GFGSigmaSet currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-        // We want to get the original accepting sigma set entry, because it
-        // has references to the sigma set entries preceding it
-        GFGSigmaSetEntry currentSigmaSetEntry = currentSigmaSet.get(acceptingEntry);
-        Stack<GFGSigmaSetEntry> callStack = new Stack<>();
-
-        while(! currentSigmaSetEntry.equals(startRuleEntry)) {
-            GFGNode currentNode = currentSigmaSetEntry.getNode();
-            if(currentNode instanceof EndGFGNode) {
-                // Reverse the Exit step
-                // For an ambiguous string, there could be multiple preceding
-                // entries. For now, we just arbitrarily pick one
-                currentSigmaSetEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
-            } else if(currentNode instanceof InnerGFGNode) {
-                // We have to examine the preceding entry to determine what case this is
-                GFGSigmaSetEntry precedingEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
-                GFGNode precedingNode = precedingEntry.getNode();
-                if(precedingNode instanceof StartGFGNode) {
-                    // Reverse the Start step
-                    currentSigmaSetEntry = precedingEntry;
-                } else if(precedingNode instanceof EndGFGNode) {
-                    // Reverse the End step
-                    // We must find the GFGSigmaSetEntry containing the call
-                    // node for the currently ending node
-                    int endingCallTag = precedingEntry.getTag();
-                    GFGSigmaSet endingCallSigmaSet = sigmaSets.get(endingCallTag);
-                    InnerGFGNode returnNode = (InnerGFGNode) currentNode;
-                    InnerGFGNode endingCallNode = returnNodesToCallNodes.get(returnNode);
-                    GFGSigmaSetEntry endingCallEntryCopy = new GFGSigmaSetEntry(endingCallNode, currentSigmaSetEntry.getTag());
-                    GFGSigmaSetEntry endingCallEntry = endingCallSigmaSet.get(endingCallEntryCopy);
-                    callStack.push(endingCallEntry);
-                    // Now we need to create a new parent node in the parse
-                    // tree, and set it as our currentParseTreeParent
-                    EndGFGNode endPrecedingNode = (EndGFGNode) precedingNode;
-                    Nonterminal endingNonterminal = endPrecedingNode.getNonterminal();
-                    ParseTreeParent endingNonterminalTreeNode = new ParseTreeParent(currentParseTreeParent, endingNonterminal);
-                    currentParseTreeParent.getChildren().add(endingNonterminalTreeNode);
-                    currentParseTreeParent = endingNonterminalTreeNode;
-                    // Could there be multiple preceding nodes in this case? I
-                    // don't know, I'll think about that when I do the parse
-                    // forest stuff
-                    currentSigmaSetEntry = precedingEntry;
-                } else { // precedingNode instanceof InnerGFGNode
-                    // Reverse the Scan step
-                    Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                    ParseTreeLeaf scanLeaf = new ParseTreeLeaf(currentParseTreeParent, scannedToken);
-                    currentParseTreeParent.getChildren().add(scanLeaf);
-                    currentSigmaSetIndex--;
-                    currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-                    currentSigmaSetEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
-                }
-            } else { // currentNode instanceof StartGFGNode
-                // Reverse the Call step
-                // We're finished working backwards through all of the current
-                // parent's nonterminal. However, as we've worked backwards,
-                // we've added the children in reverse order. So we reverse
-                // them now.
-                Collections.reverse(currentParseTreeParent.getChildren());
-                // Now we go up one level in the tree
-                currentParseTreeParent = currentParseTreeParent.getParent();
-                // And pop off the call stack
-                currentSigmaSetEntry = callStack.pop();
-            }
-        }
-
-        return currentParseTreeParent;
-        */
     }
 
     private void fillSigmaSet(ArrayList<GFGSigmaSet> sigmaSets,
@@ -321,7 +251,6 @@ public class GFGParser implements Parser {
                         // First, let's get ready to keep working left, by
                         // getting the sigma set entry we'll need to continue
                         // from
-
                         int callingNonterminalTag = precedingEntry.getTag();
                         GFGSigmaSet endingCallSigmaSet = sigmaSets.get(callingNonterminalTag);
                         InnerGFGNode returnNode = (InnerGFGNode) currentNode;
@@ -329,17 +258,28 @@ public class GFGParser implements Parser {
                         GFGSigmaSetEntry callingEntryCopy = new GFGSigmaSetEntry(endingCallNode, currentEntry.getTag());
                         GFGSigmaSetEntry originalCallingEntry = endingCallSigmaSet.get(callingEntryCopy);
 
-                        ParseTreeParent nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
-                        addChildrenRightToLeft(
-                                nonterminalNode,
-                                precedingEntry,
-                                new ArrayList<ParseTreeNode>(),
-                                existingNodes,
-                                currentSigmaSetIndex,
-                                sigmaSets,
-                                tokens
-                        );
+                        // Now we'll get the nonterminal node if it already
+                        // exists, or create it and fill it if it doesn't
+                        int lastTokenIndexCovered = currentSigmaSetIndex - 1;
+                        int firstTokenIndexCovered = callingNonterminalTag;
+                        ParseTreeParent nonterminalNode;
+                        if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
+                            nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
+                        } else {
+                            nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                            existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
+                            addChildrenRightToLeft(
+                                    nonterminalNode,
+                                    precedingEntry,
+                                    new ArrayList<ParseTreeNode>(),
+                                    existingNodes,
+                                    currentSigmaSetIndex,
+                                    sigmaSets,
+                                    tokens
+                            );
+                        }
                         accumulatedNodes.add(nonterminalNode);
+
                         // Update the fields and keep working left through
                         // the while loop
                         currentEntry = originalCallingEntry;
@@ -363,18 +303,25 @@ public class GFGParser implements Parser {
                             GFGSigmaSetEntry callingEntryCopy = new GFGSigmaSetEntry(endingCallNode, currentEntry.getTag());
                             GFGSigmaSetEntry originalCallingEntry = endingCallSigmaSet.get(callingEntryCopy);
 
-                            ParseTreeParent nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
-                            addChildrenRightToLeft(
-                                    nonterminalNode,
-                                    singlePrecedingEntry,
-                                    new ArrayList<ParseTreeNode>(),
-                                    existingNodes,
-                                    currentSigmaSetIndex,
-                                    sigmaSets,
-                                    tokens
-                            );
+                            int lastTokenIndexCovered = currentSigmaSetIndex - 1;
+                            int firstTokenIndexCovered = callingNonterminalTag;
+                            ParseTreeParent nonterminalNode;
+                            if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
+                                nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
+                            } else {
+                                nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                                existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
+                                addChildrenRightToLeft(
+                                        nonterminalNode,
+                                        singlePrecedingEntry,
+                                        new ArrayList<ParseTreeNode>(),
+                                        existingNodes,
+                                        currentSigmaSetIndex,
+                                        sigmaSets,
+                                        tokens
+                                );
+                            }
                             accumulatedNodes.add(nonterminalNode);
-
                             // Do recursive backtracking to follow all paths
                             // First we must save the size of the
                             // accumulatedNodes list, so we can remove all
@@ -400,8 +347,14 @@ public class GFGParser implements Parser {
                 } else { // precedingNode instanceof InnerGFGNode
                     // Reverse the Scan step
                     int tokenIndex = currentSigmaSetIndex - 1;
-                    Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                    ParseTreeLeaf scanLeaf = new ParseTreeLeaf(parent, scannedToken);
+                    ParseTreeLeaf scanLeaf;
+                    if(existingNodes.containsLeaf(tokenIndex)) {
+                        scanLeaf = existingNodes.getLeaf(tokenIndex);
+                    } else {
+                        Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
+                        scanLeaf = new ParseTreeLeaf(parent, scannedToken);
+                        existingNodes.addLeaf(tokenIndex, scanLeaf);
+                    }
                     accumulatedNodes.add(scanLeaf);
                     currentSigmaSetIndex--;
                     currentEntry = currentEntry.getPrecedingEntries().get(0);
