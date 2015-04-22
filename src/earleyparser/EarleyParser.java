@@ -130,152 +130,165 @@ public class EarleyParser implements Parser{
         EarleySigmaSet lastSigmaSet = sigmaSets.get(tokens.size());
         EarleySigmaSetEntry lastSigmaSetEntry = lastSigmaSet.get(acceptingSigmaSetEntry);
 
-        rebuildNode(root, lastSigmaSetEntry, new ArrayList<ParseTreeNode>(), tokens.size(), sigmaSets, tokens);
+        addChildrenRightToLeft(
+                root,
+                lastSigmaSetEntry,
+                new ArrayList<ParseTreeNode>(),
+                new ParseTreeNodeCache(),
+                tokens.size(),
+                sigmaSets,
+                tokens
+        );
         return root;
-
-        /*
-        Stack<EarleySigmaSetEntry> callStack = new Stack<>();
-        int currentSigmaSetIndex = tokens.size();
-        EarleySigmaSet currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-
-        while(! currentSigmaSetEntry.equals(startRuleEntry)) {
-            // System.out.println("Starting to process: " + currentSigmaSetEntry);
-            CursorGrammarRule currentCursorRule = currentSigmaSetEntry.getCursorGrammarRule();
-            if(currentCursorRule.isCursorAtStart()) {
-                // Reverse the Call & Start step
-                // We're done adding children to the current parent. But
-                // since we've been working backward through them, we've
-                // added them in reverse order. So we fix that now
-                Collections.reverse(currentParseTreeParent.getChildren());
-                // Now go up one level in the parse tree
-                currentParseTreeParent = currentParseTreeParent.getParent();
-                // Update the current entry
-                currentSigmaSetEntry = callStack.pop();
-            } else {
-                GrammarElement previousElement = currentCursorRule.getPreviousGrammarElement();
-                if(previousElement instanceof Terminal) {
-                    // Reverse the Scan step
-                    Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                    ParseTreeLeaf scanLeaf = new ParseTreeLeaf(currentParseTreeParent, scannedToken);
-                    currentParseTreeParent.getChildren().add(scanLeaf);
-                    currentSigmaSetIndex--;
-                    currentSigmaSet = sigmaSets.get(currentSigmaSetIndex);
-                    currentSigmaSetEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
-                } else {
-                    // Reverse the Exit & End step
-                    // Find the EarleySigmaSetEntry that started the
-                    // call that is currently ending
-                    EarleySigmaSetEntry precedingEntry = currentSigmaSetEntry.getPrecedingEntries().get(0);
-                    int endingTag = precedingEntry.getTag();
-                    EarleySigmaSet callingSigmaSet = sigmaSets.get(endingTag);
-                    CursorGrammarRule previousCursorRule = currentSigmaSetEntry.getCursorGrammarRule().createPrevious();
-                    EarleySigmaSetEntry callingEntryCopy = new EarleySigmaSetEntry(previousCursorRule, currentSigmaSetEntry.getTag());
-                    EarleySigmaSetEntry callingEntry = callingSigmaSet.get(callingEntryCopy);
-                    callStack.push(callingEntry);
-                    // Now we need to add a new parent to the parse
-                    // tree, and then make it the current parent
-                    Nonterminal endingNonterminal = (Nonterminal) previousElement;
-                    ParseTreeParent endingParent = new ParseTreeParent(currentParseTreeParent, endingNonterminal);
-                    currentParseTreeParent.getChildren().add(endingParent);
-                    currentParseTreeParent = endingParent;
-                    currentSigmaSetEntry = precedingEntry;
-                }
-            }
-        }
-        */
     }
 
-    private void rebuildNode(ParseTreeParent parent, EarleySigmaSetEntry currentEntry, List<ParseTreeNode> accumulatedNodes, int currentSigmaSetIndex, List<EarleySigmaSet> sigmaSets, List<Token> tokens) {
-        // System.out.println("Starting call");
-        // System.out.println("- Current entry: " + currentEntry);
-        // System.out.println("- Parent: " + parent);
-        // System.out.println("- Node list: " + accumulatedNodes);
-        // System.out.println("- Current SSI: " + currentSigmaSetIndex);
-        int numNodesInList = accumulatedNodes.size();
+    private void addChildrenRightToLeft(
+            ParseTreeParent parent,
+            EarleySigmaSetEntry currentEntry,
+            List<ParseTreeNode> accumulatedNodes,
+            ParseTreeNodeCache existingNodes,
+            int currentSigmaSetIndex,
+            List<EarleySigmaSet> sigmaSets,
+            List<Token> tokens) {
         while(true) {
-            // System.out.println("Starting while loop");
-            // System.out.println("- Current entry: " + currentEntry);
-            // System.out.println("- Parent: " + parent);
-            // System.out.println("- Node list: " + accumulatedNodes);
-            // System.out.println("- Current SSI: " + currentSigmaSetIndex);
             CursorGrammarRule currentGrammarRule = currentEntry.getCursorGrammarRule();
             if(currentGrammarRule.isCursorAtStart()) {
-                // System.out.println("At the beginning of a cursor rule");
-                // System.out.println("- Current entry: " + currentEntry);
-                // System.out.println("- Parent: " + parent);
-                // System.out.println("- Node list: " + accumulatedNodes);
-                // System.out.println("- Current SSI: " + currentSigmaSetIndex);
-                // We're done working backwards on this call
+                // We're done working right to left
                 // Add (a copy of) this list to the parent
-                // They were added in from rightmost to leftmost, so we
-                // need to reverse them
+                // They were added in from right to left, so we
+                // need to reverse them first
                 ArrayList<ParseTreeNode> childTreeNodes = new ArrayList<>();
                 for(int i = accumulatedNodes.size() - 1; i >= 0; i--) {
                     childTreeNodes.add(accumulatedNodes.get(i));
                 }
-                parent.addChildTree(childTreeNodes);
-                // Now we need to clean up the accumulatedNodes list
-                while(accumulatedNodes.size() > numNodesInList) {
-                    accumulatedNodes.remove(accumulatedNodes.size() - 1);
+                String rhs = "";
+                for(ParseTreeNode child : childTreeNodes) {
+                    if(child instanceof ParseTreeParent) {
+                        rhs += ((ParseTreeParent) child).getNonterminal() + " ";
+                    } else {
+                        rhs += ((ParseTreeLeaf) child).getSymbol() + " ";
+                    }
                 }
+                parent.addChildTree(childTreeNodes);
                 // And we're done
                 return;
             }
             GrammarElement previousElement = currentGrammarRule.getPreviousGrammarElement();
             if(previousElement instanceof Terminal) {
                 // Easy case - just create a new node and add it to the list
-                Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                ParseTreeLeaf scanLeaf = new ParseTreeLeaf(parent, scannedToken);
+                int tokenIndex = currentSigmaSetIndex - 1;
+                ParseTreeLeaf scanLeaf;
+                if(existingNodes.containsLeaf(tokenIndex)) {
+                    scanLeaf = existingNodes.getLeaf(tokenIndex);
+                } else {
+                    Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
+                    scanLeaf = new ParseTreeLeaf(parent, scannedToken);
+                    existingNodes.addLeaf(tokenIndex, scanLeaf);
+                }
                 accumulatedNodes.add(scanLeaf);
                 currentSigmaSetIndex--;
                 currentEntry = currentEntry.getPrecedingEntries().get(0);
             } else { // previousElement instanceof Nonterminal
                 Nonterminal previousNonterminal = (Nonterminal) previousElement;
                 List<EarleySigmaSetEntry> precedingEntries = currentEntry.getPrecedingEntries();
-                for(EarleySigmaSetEntry precedingEntry : precedingEntries) {
-                    // Go ahead and make the node for the nonterminal
-                    ParseTreeParent nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
-                    // Now we work down to fill in nonterminalNode
-                    rebuildNode(nonterminalNode, precedingEntry, new ArrayList<ParseTreeNode>(), currentSigmaSetIndex, sigmaSets, tokens);
-                    // Add the (now filled in) nonterminalNode to the
-                    // list
-                    accumulatedNodes.add(nonterminalNode);
-                    // Now we need to recurse SIDEWAYS to finish
-                    // exploring this path
-                    // Get the correct sigma set entry to continue
-                    // working sideways from
+                if(precedingEntries.size() == 1) {
+                    // Easy case - we just need to add a nonterminal node
+                    // as a child, fill it with children, and then
+                    // keep going through the while loop
+                    // First, let's get ready to keep working left, by
+                    // getting the sigma set entry we'll need to continue
+                    // from
                     CursorGrammarRule previousGrammarRule = currentGrammarRule.createPrevious();
                     int currentTag = currentEntry.getTag();
+                    EarleySigmaSetEntry precedingEntry = precedingEntries.get(0);
                     int callingNonterminalTag = precedingEntry.getTag();
                     EarleySigmaSet callingSigmaSet = sigmaSets.get(callingNonterminalTag);
                     EarleySigmaSetEntry callingEntryCopy = new EarleySigmaSetEntry(previousGrammarRule, currentTag);
                     EarleySigmaSetEntry originalCallingEntry = callingSigmaSet.get(callingEntryCopy);
-                    // Here, we need to continue working sideways. If
-                    // there is only one preceding entry, things are
-                    // easy and we can continue with our current while
-                    // loop. If there is more than one preceding entry,
-                    // we need to do recursive backtracking to work
-                    // sideways.
-                    if(precedingEntries.size() == 1) {
-                        currentEntry = originalCallingEntry;
-                        currentSigmaSetIndex = callingNonterminalTag;
+                    // Now we'll get the nonterminal node if it already
+                    // exists, or create it and fill it if it doesn't
+                    int lastTokenIndexCovered = currentSigmaSetIndex - 1;
+                    int firstTokenIndexCovered = callingNonterminalTag;
+                    ParseTreeParent nonterminalNode;
+                    if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
+                        nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
                     } else {
-                        rebuildNode(parent, originalCallingEntry, accumulatedNodes, callingNonterminalTag, sigmaSets, tokens);
-                        // And remove the nonterminal node from the list
-                        // so the list is unmodified for the next
-                        // iteration of this loop
-                        accumulatedNodes.remove(accumulatedNodes.size() - 1);
+                        nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                        existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
+                        addChildrenRightToLeft(
+                                nonterminalNode,
+                                precedingEntry,
+                                new ArrayList<ParseTreeNode>(),
+                                existingNodes,
+                                currentSigmaSetIndex,
+                                sigmaSets,
+                                tokens
+                        );
                     }
-                    // Now recurse sideways
-                }
-                // If we were doing the recursive calls sideways, we've
-                // finished all of this method
-                // All we have to do is clean up the accumulatedNodes
-                // list and return
-                if(precedingEntries.size() > 1) {
-                    while(accumulatedNodes.size() > numNodesInList) {
-                        accumulatedNodes.remove(accumulatedNodes.size() - 1);
+                    accumulatedNodes.add(nonterminalNode);
+                    // Update the fields and keep working left through
+                    // the while loop
+                    currentEntry = originalCallingEntry;
+                    currentSigmaSetIndex = callingNonterminalTag;
+                } else {
+                    // This is the harder case - we need to do recursive
+                    // backtracking to follow all possible paths to the
+                    // left
+                    // Keep track of the current size of the
+                    // accumulated nodes list so that after every
+                    // recursive call we can get it back to its
+                    // current state
+                    int numAccumNodes = accumulatedNodes.size();
+                    for(EarleySigmaSetEntry precedingEntry : precedingEntries) {
+                        // Get the correct sigma set entry to continue
+                        // working left from
+                        CursorGrammarRule previousGrammarRule = currentGrammarRule.createPrevious();
+                        int currentTag = currentEntry.getTag();
+                        int callingNonterminalTag = precedingEntry.getTag();
+                        EarleySigmaSet callingSigmaSet = sigmaSets.get(callingNonterminalTag);
+                        EarleySigmaSetEntry callingEntryCopy = new EarleySigmaSetEntry(previousGrammarRule, currentTag);
+                        EarleySigmaSetEntry originalCallingEntry = callingSigmaSet.get(callingEntryCopy);
+
+                        int lastTokenIndexCovered = currentSigmaSetIndex - 1;
+                        int firstTokenIndexCovered = callingNonterminalTag;
+                        ParseTreeParent nonterminalNode;
+                        if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
+                            nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
+                        } else {
+                            nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                            existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
+                            addChildrenRightToLeft(
+                                    nonterminalNode,
+                                    precedingEntry,
+                                    new ArrayList<ParseTreeNode>(),
+                                    existingNodes,
+                                    currentSigmaSetIndex,
+                                    sigmaSets,
+                                    tokens
+                            );
+                        }
+                        accumulatedNodes.add(nonterminalNode);
+
+                        // Do recursive backtracking to follow all paths
+                        // First we must save the size of the
+                        // accumulatedNodes list, so we can remove all
+                        // the children that the recursive call adds
+                        addChildrenRightToLeft(
+                                parent,
+                                originalCallingEntry,
+                                accumulatedNodes,
+                                existingNodes,
+                                callingNonterminalTag,
+                                sigmaSets,
+                                tokens);
+                        // Remove the nodes now
+                        while (accumulatedNodes.size() > numAccumNodes) {
+                            accumulatedNodes.remove(accumulatedNodes.size() - 1);
+                        }
                     }
+                    // We've done all the working left we need to do
+                    // through the recursive calls, so we can just
+                    // return
                     return;
                 }
             }

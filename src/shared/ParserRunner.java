@@ -97,7 +97,8 @@ public class ParserRunner {
             if(parsingResult == null) {
                 System.out.println("That line is not in the language");
             } else {
-                printParseTree(parsingResult);
+                // printParseTree(parsingResult);
+                printAllParseTrees(parsingResult);
             }
         }
     }
@@ -146,7 +147,7 @@ public class ParserRunner {
             if(childTrees.size() == 1) {
                 List<ParseTreeNode> children = childTrees.iterator().next();
                 System.out.print(prefix);
-                System.out.print(parent.getNonterminal());
+                System.out.print(parent.getNonterminal() + " (" + parent.id + ")");
                 System.out.print(" -> ");
                 for(ParseTreeNode child : children) {
                     if(child instanceof ParseTreeParent) {
@@ -161,7 +162,7 @@ public class ParserRunner {
                 }
             } else {
                 System.out.print(prefix);
-                System.out.println(parent.getNonterminal());
+                System.out.println(parent.getNonterminal() + " (" + parent.id + ")");
                 int i = 1;
                 for(List<ParseTreeNode> childTree : childTrees) {
                     String rhs = "";
@@ -181,4 +182,60 @@ public class ParserRunner {
         }
     }
 
+    public static void printAllParseTrees(ParseTreeNode root) {
+        List<String> parses = getAllParseStrings("", root);
+        System.out.println(parses.size() + " parse tree" + (parses.size() == 1 ? "" : "s"));
+        for(String parse : parses) {
+            System.out.println(parse);
+        }
+    }
+
+    public static List<String> getAllParseStrings(String prefix, ParseTreeNode node) {
+        if(node instanceof ParseTreeLeaf) {
+            return Arrays.asList(prefix + node + "\n");
+        } else {
+            ParseTreeParent parent = (ParseTreeParent) node;
+            List<String> parses = new ArrayList<>();
+            for(List<ParseTreeNode> childTree : parent.getChildTrees()) {
+                String header = parent.getNonterminal() + " -> ";
+                for(ParseTreeNode childNode : childTree) {
+                    if(childNode instanceof ParseTreeParent) {
+                        header += ((ParseTreeParent) childNode).getNonterminal() + " ";
+                    } else {
+                        header += ((ParseTreeLeaf) childNode).getSymbol() + " ";
+                    }
+                }
+                header = prefix + header.substring(0, header.length() - 1) + "\n";
+                ArrayList<List<String>> childStrings = new ArrayList<>(childTree.size());
+                for(int i = 0; i < childTree.size(); i++) {
+                    childStrings.add(getAllParseStrings(prefix + " ", childTree.get(i)));
+                }
+
+                ArrayList<Integer> stack = new ArrayList<>();
+                for(int i = 0; i < childStrings.size(); i++) {
+                    stack.add(0);
+                }
+                while(true) {
+                    // print
+                    String parse = "";
+                    for(int i = 0; i < stack.size(); i++) {
+                        parse += childStrings.get(i).get(stack.get(i));
+                    }
+                    parses.add(header + parse);
+                    // modify
+                    while(! stack.isEmpty() && stack.get(stack.size() - 1) == childStrings.get(stack.size() - 1).size() - 1) {
+                        stack.remove(stack.size() - 1);
+                    }
+                    if(stack.isEmpty()) {
+                        break;
+                    }
+                    stack.set(stack.size() - 1, stack.get(stack.size() - 1) + 1);
+                    while(stack.size() < childStrings.size()) {
+                        stack.add(0);
+                    }
+                }
+            }
+            return parses;
+        }
+    }
 }
