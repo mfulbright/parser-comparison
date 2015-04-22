@@ -147,7 +147,7 @@ public class ParserRunner {
             if(childTrees.size() == 1) {
                 List<ParseTreeNode> children = childTrees.iterator().next();
                 System.out.print(prefix);
-                System.out.print(parent.getNonterminal() + " (" + parent.id + ")");
+                System.out.print(parent.getNonterminal());
                 System.out.print(" -> ");
                 for(ParseTreeNode child : children) {
                     if(child instanceof ParseTreeParent) {
@@ -162,7 +162,7 @@ public class ParserRunner {
                 }
             } else {
                 System.out.print(prefix);
-                System.out.println(parent.getNonterminal() + " (" + parent.id + ")");
+                System.out.println(parent.getNonterminal());
                 int i = 1;
                 for(List<ParseTreeNode> childTree : childTrees) {
                     String rhs = "";

@@ -1,5 +1,7 @@
 package shared;
 
+import java.util.Objects;
+
 public class Token {
 
     private String text;
@@ -19,9 +21,22 @@ public class Token {
     }
 
     @Override
+    public boolean equals(Object other) {
+        if(! (other instanceof Token)) {
+            return false;
+        }
+        Token otherToken = (Token) other;
+        return otherToken.text.equals(text) &&
+                otherToken.type.equals(type);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(text, type);
+    }
+
+    @Override
     public String toString() {
         return "<" + type + ": " + text + ">";
     }
-
-    // TODO: Should probably override equals and hashCode here
 }

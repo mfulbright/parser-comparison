@@ -190,7 +190,7 @@ public class GFGParser implements Parser {
 
     private ParseTreeNode buildParseTree(List<Token> tokens, List<GFGSigmaSet> sigmaSets) {
         GrammarRule startRule = grammar.getStartRule();
-        ParseTreeParent root = new ParseTreeParent(null, startRule.getLeftHandSide());
+        ParseTreeParent root = new ParseTreeParent(startRule.getLeftHandSide());
         EndGFGNode acceptingNode = endNodes.get(grammar.getStartRule().getLeftHandSide());
         GFGSigmaSetEntry acceptingSigmaSetEntry = new GFGSigmaSetEntry(acceptingNode, 0);
         GFGSigmaSet lastSigmaSet = sigmaSets.get(tokens.size());
@@ -266,7 +266,7 @@ public class GFGParser implements Parser {
                         if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
                             nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
                         } else {
-                            nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                            nonterminalNode = new ParseTreeParent(previousNonterminal);
                             existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
                             addChildrenRightToLeft(
                                     nonterminalNode,
@@ -309,7 +309,7 @@ public class GFGParser implements Parser {
                             if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
                                 nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
                             } else {
-                                nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                                nonterminalNode = new ParseTreeParent(previousNonterminal);
                                 existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
                                 addChildrenRightToLeft(
                                         nonterminalNode,
@@ -352,7 +352,7 @@ public class GFGParser implements Parser {
                         scanLeaf = existingNodes.getLeaf(tokenIndex);
                     } else {
                         Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                        scanLeaf = new ParseTreeLeaf(parent, scannedToken);
+                        scanLeaf = new ParseTreeLeaf(scannedToken);
                         existingNodes.addLeaf(tokenIndex, scanLeaf);
                     }
                     accumulatedNodes.add(scanLeaf);

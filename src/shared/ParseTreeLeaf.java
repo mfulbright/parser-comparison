@@ -1,22 +1,13 @@
 package shared;
 
+import java.util.Objects;
+
 public class ParseTreeLeaf implements ParseTreeNode {
 
-    // temp
-    private static int idcount = 0;
-    private String id;
-
-    private ParseTreeParent parent;
     private Token token;
 
-    public ParseTreeLeaf(ParseTreeParent p, Token t) {
-        id = "L" + idcount++;
-        parent = p;
+    public ParseTreeLeaf(Token t) {
         token = t;
-    }
-
-    public ParseTreeParent getParent() {
-        return parent;
     }
 
     public Token getToken() {
@@ -28,7 +19,21 @@ public class ParseTreeLeaf implements ParseTreeNode {
     }
 
     @Override
+    public boolean equals(Object other) {
+        if(! (other instanceof ParseTreeLeaf)) {
+            return false;
+        }
+        ParseTreeLeaf otherLeaf = (ParseTreeLeaf) other;
+        return otherLeaf.token.equals(token);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(token);
+    }
+
+    @Override
     public String toString() {
-        return token.toString() + " (" + id + ")";
+        return token.toString();
     }
 }

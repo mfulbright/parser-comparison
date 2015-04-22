@@ -6,23 +6,12 @@ import java.util.Set;
 
 public class ParseTreeParent implements ParseTreeNode {
 
-    // temp
-    private static int idcount = 0;
-    public String id;
-
-    private ParseTreeParent parent;
     private Nonterminal nonterminal;
     private HashSet<List<ParseTreeNode>> childTrees;
 
-    public ParseTreeParent(ParseTreeParent p, Nonterminal n) {
-        id = "P" + idcount++;
-        parent = p;
+    public ParseTreeParent(Nonterminal n) {
         nonterminal = n;
         childTrees = new HashSet<>();
-    }
-
-    public ParseTreeParent getParent() {
-        return parent;
     }
 
     public Nonterminal getNonterminal() {
@@ -38,7 +27,7 @@ public class ParseTreeParent implements ParseTreeNode {
     }
 
     public String toString() {
-        String ret = nonterminal + " (" + id + "): ";
+        String ret = nonterminal + ": ";
         int childCount = 1;
         for(List<ParseTreeNode> childTree : childTrees) {
             String childString = "";

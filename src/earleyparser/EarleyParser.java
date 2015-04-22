@@ -124,7 +124,7 @@ public class EarleyParser implements Parser{
 
     private ParseTreeNode buildParseTree(List<Token> tokens, List<EarleySigmaSet> sigmaSets) {
         GrammarRule startRule = grammar.getStartRule();
-        ParseTreeParent root = new ParseTreeParent(null, startRule.getLeftHandSide());
+        ParseTreeParent root = new ParseTreeParent(startRule.getLeftHandSide());
         CursorGrammarRule acceptingCursorGrammarRule = new CursorGrammarRule(startRule, startRule.getRightHandSide().size());
         EarleySigmaSetEntry acceptingSigmaSetEntry = new EarleySigmaSetEntry(acceptingCursorGrammarRule, 0);
         EarleySigmaSet lastSigmaSet = sigmaSets.get(tokens.size());
@@ -174,7 +174,7 @@ public class EarleyParser implements Parser{
                     scanLeaf = existingNodes.getLeaf(tokenIndex);
                 } else {
                     Token scannedToken = tokens.get(currentSigmaSetIndex - 1);
-                    scanLeaf = new ParseTreeLeaf(parent, scannedToken);
+                    scanLeaf = new ParseTreeLeaf(scannedToken);
                     existingNodes.addLeaf(tokenIndex, scanLeaf);
                 }
                 accumulatedNodes.add(scanLeaf);
@@ -205,7 +205,7 @@ public class EarleyParser implements Parser{
                     if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
                         nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
                     } else {
-                        nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                        nonterminalNode = new ParseTreeParent(previousNonterminal);
                         existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
                         addChildrenRightToLeft(
                                 nonterminalNode,
@@ -247,7 +247,7 @@ public class EarleyParser implements Parser{
                         if(existingNodes.containsParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal)) {
                             nonterminalNode = existingNodes.getParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal);
                         } else {
-                            nonterminalNode = new ParseTreeParent(parent, previousNonterminal);
+                            nonterminalNode = new ParseTreeParent(previousNonterminal);
                             existingNodes.addParent(firstTokenIndexCovered, lastTokenIndexCovered, previousNonterminal, nonterminalNode);
                             addChildrenRightToLeft(
                                     nonterminalNode,
