@@ -1,6 +1,6 @@
 package shared;
 
-import earleyparser.EarleyParser;
+import gfgparser.GFGParser;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,7 +57,7 @@ public class ParserRunner {
         }
         Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
 
-        Parser parser = new EarleyParser(grammar);
+        Parser parser = new GFGParser(grammar);
 
         Scanner input = new Scanner(System.in);
         InputLoop:

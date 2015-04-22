@@ -161,14 +161,6 @@ public class EarleyParser implements Parser{
                 for(int i = accumulatedNodes.size() - 1; i >= 0; i--) {
                     childTreeNodes.add(accumulatedNodes.get(i));
                 }
-                String rhs = "";
-                for(ParseTreeNode child : childTreeNodes) {
-                    if(child instanceof ParseTreeParent) {
-                        rhs += ((ParseTreeParent) child).getNonterminal() + " ";
-                    } else {
-                        rhs += ((ParseTreeLeaf) child).getSymbol() + " ";
-                    }
-                }
                 parent.addChildTree(childTreeNodes);
                 // And we're done
                 return;

@@ -54,7 +54,21 @@ public class GFGSigmaSetEntry {
         return Objects.hash(node, tag);
     }
 
-    public String toString() {
+    public String entryString() {
         return "<" + node + ", " + tag + ">";
+    }
+
+    @Override
+    public String toString() {
+        String precedingEntriesString = "(";
+        if(precedingEntries.size() > 0) {
+            precedingEntriesString += precedingEntries.get(0).entryString();
+        }
+        for(int i = 1; i < precedingEntries.size(); i++) {
+            precedingEntriesString += ", " + precedingEntries.get(i).entryString();
+        }
+        precedingEntriesString += ")";
+
+        return "<" + node + ", " + tag + "> - " + precedingEntriesString;
     }
 }

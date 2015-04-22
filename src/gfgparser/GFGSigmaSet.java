@@ -4,6 +4,7 @@ import shared.Nonterminal;
 import shared.Symbol;
 import shared.Terminal;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -32,6 +33,9 @@ public class GFGSigmaSet {
     }
 
     public void add(GFGSigmaSetEntry entry) {
+        if(contains(entry)) {
+            return;
+        }
         allEntries.put(entry, entry);
         GFGNode entryNode = entry.getNode();
         if(entryNode instanceof InnerGFGNode) {
@@ -53,6 +57,12 @@ public class GFGSigmaSet {
                     entriesPrecedingNonterminal.get(nextNonterminal).add(entry);
                 }
             }
+        }
+    }
+
+    public void addAll(Collection<GFGSigmaSetEntry> entries) {
+        for(GFGSigmaSetEntry entry : entries) {
+            add(entry);
         }
     }
 
@@ -91,6 +101,6 @@ public class GFGSigmaSet {
     }
 
     public String toString() {
-        return allEntries.toString();
+        return allEntries.keySet().toString();
     }
 }
