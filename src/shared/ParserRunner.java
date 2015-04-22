@@ -23,7 +23,8 @@ public class ParserRunner {
         assert(line.equals("LEX"));
 
         // Map the names of symbols to the symbol instances
-        HashMap<String, Symbol> symbols = new HashMap<>();
+        ArrayList<Symbol> symbols = new ArrayList<>();
+        ArrayList<String> symbolNames = new ArrayList<>();
         // Map the names of terminals to the terminal instances
         HashMap<String, Terminal> terminals = new HashMap<>();
         line = grammarFile.nextLine();
@@ -31,9 +32,10 @@ public class ParserRunner {
             // The format of each line should be "name = pattern"
             String name = line.substring(0, line.indexOf(" "));
             String pattern = line.substring(line.indexOf(" ") + 3);
-            assert(! symbols.containsKey(name));
+            assert(! symbolNames.contains(name));
             Symbol newSymbol = new Symbol(name, pattern);
-            symbols.put(name, newSymbol);
+            symbols.add(newSymbol);
+            symbolNames.add(name);
             terminals.put(name, new Terminal(newSymbol));
             line = grammarFile.nextLine();
         }
@@ -52,9 +54,10 @@ public class ParserRunner {
 
         // Compile the lexer patterns into a regex matcher
         StringBuffer combinedRegexBuffer = new StringBuffer();
-        for(String name : symbols.keySet()) {
-            Symbol symbol = symbols.get(name);
-            combinedRegexBuffer.append(String.format("|(?<%s>%s)", name, symbol.getPattern()));
+        for(int i = 0; i < symbols.size(); i++) {
+            Symbol symbol = symbols.get(i);
+            String symbolName = symbolNames.get(i);
+            combinedRegexBuffer.append(String.format("|\\s*(?<%s>%s)", symbolName, symbol.getPattern()));
         }
         Pattern lexerPattern = Pattern.compile(combinedRegexBuffer.substring(1));
 
@@ -80,9 +83,11 @@ public class ParserRunner {
                     System.out.println("That line failed to be tokenized");
                     continue InputLoop;
                 }
-                for(String name : symbols.keySet()) {
-                    if(inputMatcher.group(name) != null) {
-                        Token matchedToken = new Token(inputMatcher.group(name), symbols.get(name));
+                for(int i = 0; i < symbols.size(); i++) {
+                    String symbolName = symbolNames.get(i);
+                    if(inputMatcher.group(symbolName) != null) {
+                        Symbol symbol = symbols.get(i);
+                        Token matchedToken = new Token(inputMatcher.group(symbolName), symbol);
                         tokens.add(matchedToken);
                         break;
                     }
