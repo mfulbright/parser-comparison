@@ -95,7 +95,6 @@ public class ParserRunner {
                 lastIndexMatched = inputMatcher.end();
             }
             if(lastIndexMatched != inputLine.length()) {
-                System.out.println("That line failed to be tokenized");
                 continue;
             }
 
@@ -125,7 +124,8 @@ public class ParserRunner {
             if(earleyResult == null) {
                 System.out.println("That line is not in the language");
             } else {
-                printAllParseTrees(earleyResult);
+                System.out.println("Done");
+                // printAllParseTrees(earleyResult);
             }
         }
     }

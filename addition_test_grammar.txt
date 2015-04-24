@@ -1,0 +1,11 @@
+TERMINALS
+OPENPARENTHESIS = (
+CLOSEPARENTHESIS = )
+PLUS = +
+INT = 56
+
+GRAMMAR_RULES
+Start = Expression
+Expression = OPENPARENTHESIS Expression PLUS Expression CLOSEPARENTHESIS
+Expression = Expression PLUS Expression
+Expression = INT
